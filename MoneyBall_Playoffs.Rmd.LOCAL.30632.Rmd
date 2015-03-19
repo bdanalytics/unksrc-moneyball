@@ -132,7 +132,6 @@ glb_entity_df <- mutate(glb_entity_df,
 #     <col_name>.NA=is.na(<col_name>) 
     Team_fctr=factor(Team, 
                 as.factor(union(glb_entity_df$Team, glb_predct_df$Team))),
-#     Team_fctr_num=grep(Team, levels(Team_fctr)), # This doesn't work
     League_fctr=factor(League, 
                 as.factor(union(glb_entity_df$League, glb_predct_df$League)))
 #     
@@ -142,9 +141,6 @@ glb_entity_df <- mutate(glb_entity_df,
 #     Weekday=weekdays(Date.my)
     
                     )
-
-# If levels of a factor are different across glb_entity_df & glb_predct_df; predict.glm fails  
-# Transformations not handled by mutate                    
 glb_entity_df$Team_fctr_num <- sapply(1:nrow(glb_entity_df), 
     function(row_ix) grep(glb_entity_df[row_ix, "Team"],
                           levels(glb_entity_df[row_ix, "Team_fctr"])))
@@ -157,7 +153,6 @@ glb_predct_df <- mutate(glb_predct_df,
                 as.factor(union(glb_entity_df$League, glb_predct_df$League)))
                         
                     )
-
 glb_predct_df$Team_fctr_num <- sapply(1:nrow(glb_predct_df), 
     function(row_ix) grep(glb_predct_df[row_ix, "Team"],
                           levels(glb_predct_df[row_ix, "Team_fctr"])))
@@ -289,29 +284,12 @@ glb_models_df <- data.frame()
 #               glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
 
 if (glb_is_regression) {
-    # Highest cor.y
-    ret_lst <- myrun_mdl_lm(indep_vars_vctr=glb_feats_df$id[1],
-                            fit_df=glb_entity_df, OOB_df=glb_predct_df)
-    print(summary(mdl <- ret_lst$model)); 
-    print(orderBy(~ -R.sq.OOB -Adj.R.sq.fit, 
-              glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
-
-    # Uncorrelated X
     ret_lst <- myrun_mdl_lm(indep_vars_vctr=glb_feats_df$id,
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)
     print(summary(mdl <- ret_lst$model)); 
     print(orderBy(~ -R.sq.OOB -Adj.R.sq.fit, 
               glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
     glb_sel_mdl <- mdl
-    
-    # All X that is not missing
-    ret_lst <- myrun_mdl_lm(indep_vars_vctr=setdiff(setdiff(names(glb_entity_df),
-                                                             glb_predct_var),
-                                                     glb_exclude_vars_as_features),
-                            fit_df=glb_entity_df, OOB_df=glb_predct_df)
-    print(summary(mdl <- ret_lst$model)); 
-    print(orderBy(~ -R.sq.OOB -Adj.R.sq.fit, 
-              glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))    
 }    
 
 #   Classification:
@@ -327,7 +305,7 @@ if (glb_is_regression) {
 
 if (glb_is_classification) {
     # Highest cor.y
-    ret_lst <- myrun_mdl_glm(indep_vars_vctr=glb_feats_df$id[1],
+    ret_lst <- myrun_mdl_glm(indep_vars_vctr=c("W"),
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)        
     print(summary(mdl <- ret_lst$model)); 
     print(orderBy(~ -f.score.OOB, 
@@ -357,6 +335,7 @@ if (glb_is_regression)
                     size=3.5))
 
 if (glb_is_classification)
+    #print("Display plot to evaluate classification models")
     print(myplot_hbar(df=glb_models_df, xcol_name="feats", ycol_names="f.score.OOB"))
 
 script_df <- rbind(script_df, 

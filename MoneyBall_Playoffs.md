@@ -297,6 +297,7 @@ glb_entity_df <- mutate(glb_entity_df,
 #     <col_name>.NA=is.na(<col_name>) 
     Team_fctr=factor(Team, 
                 as.factor(union(glb_entity_df$Team, glb_predct_df$Team))),
+#     Team_fctr_num=grep(Team, levels(Team_fctr)), # This doesn't work
     League_fctr=factor(League, 
                 as.factor(union(glb_entity_df$League, glb_predct_df$League)))
 #     
@@ -306,6 +307,9 @@ glb_entity_df <- mutate(glb_entity_df,
 #     Weekday=weekdays(Date.my)
     
                     )
+
+# If levels of a factor are different across glb_entity_df & glb_predct_df; predict.glm fails  
+# Transformations not handled by mutate                    
 glb_entity_df$Team_fctr_num <- sapply(1:nrow(glb_entity_df), 
     function(row_ix) grep(glb_entity_df[row_ix, "Team"],
                           levels(glb_entity_df[row_ix, "Team_fctr"])))
@@ -318,6 +322,7 @@ glb_predct_df <- mutate(glb_predct_df,
                 as.factor(union(glb_entity_df$League, glb_predct_df$League)))
                         
                     )
+
 glb_predct_df$Team_fctr_num <- sapply(1:nrow(glb_predct_df), 
     function(row_ix) grep(glb_predct_df[row_ix, "Team"],
                           levels(glb_predct_df[row_ix, "Team_fctr"])))
@@ -1106,12 +1111,29 @@ glb_models_df <- data.frame()
 #               glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
 
 if (glb_is_regression) {
+    # Highest cor.y
+    ret_lst <- myrun_mdl_lm(indep_vars_vctr=glb_feats_df$id[1],
+                            fit_df=glb_entity_df, OOB_df=glb_predct_df)
+    print(summary(mdl <- ret_lst$model)); 
+    print(orderBy(~ -R.sq.OOB -Adj.R.sq.fit, 
+              glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
+
+    # Uncorrelated X
     ret_lst <- myrun_mdl_lm(indep_vars_vctr=glb_feats_df$id,
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)
     print(summary(mdl <- ret_lst$model)); 
     print(orderBy(~ -R.sq.OOB -Adj.R.sq.fit, 
               glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
     glb_sel_mdl <- mdl
+    
+    # All X that is not missing
+    ret_lst <- myrun_mdl_lm(indep_vars_vctr=setdiff(setdiff(names(glb_entity_df),
+                                                             glb_predct_var),
+                                                     glb_exclude_vars_as_features),
+                            fit_df=glb_entity_df, OOB_df=glb_predct_df)
+    print(summary(mdl <- ret_lst$model)); 
+    print(orderBy(~ -R.sq.OOB -Adj.R.sq.fit, 
+              glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))    
 }    
 
 #   Classification:
@@ -1127,7 +1149,7 @@ if (glb_is_regression) {
 
 if (glb_is_classification) {
     # Highest cor.y
-    ret_lst <- myrun_mdl_glm(indep_vars_vctr=c("W"),
+    ret_lst <- myrun_mdl_glm(indep_vars_vctr=glb_feats_df$id[1],
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)        
     print(summary(mdl <- ret_lst$model)); 
     print(orderBy(~ -f.score.OOB, 
@@ -1153,34 +1175,36 @@ if (glb_is_classification) {
 ```
 
 ```
-## [1] 35
-## [1] 0.4919257
+## [1] 90
+## [1] -0.3064767
 ## 
 ## Call:
 ## glm(formula = reformulate(indep_vars_vctr, response = glb_predct_var), 
 ##     family = "binomial", data = fit_df)
 ## 
 ## Deviance Residuals: 
-##      Min        1Q    Median        3Q       Max  
-## -2.64935  -0.29726  -0.07523  -0.00944   2.76111  
+##     Min       1Q   Median       3Q      Max  
+## -0.7529  -0.6537  -0.5721  -0.4885   2.1270  
 ## 
 ## Coefficients:
-##              Estimate Std. Error z value Pr(>|z|)    
-## (Intercept) -32.17185    2.63767  -12.20   <2e-16 ***
-## W             0.34613    0.02894   11.96   <2e-16 ***
+##               Estimate Std. Error z value Pr(>|z|)    
+## (Intercept) -54.290680  15.662082  -3.466 0.000528 ***
+## Year          0.026574   0.007891   3.367 0.000759 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## (Dispersion parameter for binomial family taken to be 1)
 ## 
 ##     Null deviance: 824.51  on 901  degrees of freedom
-## Residual deviance: 363.57  on 900  degrees of freedom
-## AIC: 367.57
+## Residual deviance: 812.85  on 900  degrees of freedom
+## AIC: 816.85
 ## 
-## Number of Fisher Scoring iterations: 7
+## Number of Fisher Scoring iterations: 4
 ## 
-##   feats n.fit R.sq.fit  R.sq.OOB Adj.R.sq.fit  SSE.fit SSE.OOB f.score.OOB
-## 1     W   902       NA 0.4919257           NA 7723.216      35       0.944
+##   feats n.fit R.sq.fit   R.sq.OOB Adj.R.sq.fit  SSE.fit SSE.OOB
+## 1  Year   902       NA -0.3064767           NA 6762.359      90
+##   f.score.OOB
+## 1          NA
 ## [1] 32
 ## [1] 0.535475
 ## 
@@ -1211,12 +1235,12 @@ if (glb_is_classification) {
 ## 
 ## Number of Fisher Scoring iterations: 8
 ## 
-##                feats n.fit R.sq.fit  R.sq.OOB Adj.R.sq.fit   SSE.fit
-## 2 Year, RS, RA, W, G   902       NA 0.5354750           NA 28470.053
-## 1                  W   902       NA 0.4919257           NA  7723.216
+##                feats n.fit R.sq.fit   R.sq.OOB Adj.R.sq.fit   SSE.fit
+## 2 Year, RS, RA, W, G   902       NA  0.5354750           NA 28470.053
+## 1               Year   902       NA -0.3064767           NA  6762.359
 ##   SSE.OOB f.score.OOB
 ## 2      32   0.9490446
-## 1      35   0.9440000
+## 1      90          NA
 ## [1] 34
 ## [1] 0.5064421
 ## 
@@ -1255,11 +1279,11 @@ if (glb_is_classification) {
 ##                                                          feats n.fit
 ## 2                                           Year, RS, RA, W, G   902
 ## 3 Year, RS, RA, W, OBP, SLG, BA, G, League_fctr, Team_fctr_num   902
-## 1                                                            W   902
-##   R.sq.fit  R.sq.OOB Adj.R.sq.fit   SSE.fit SSE.OOB f.score.OOB
-## 2       NA 0.5354750           NA 28470.053      32   0.9490446
-## 3       NA 0.5064421           NA 38394.881      34   0.9456869
-## 1       NA 0.4919257           NA  7723.216      35   0.9440000
+## 1                                                         Year   902
+##   R.sq.fit   R.sq.OOB Adj.R.sq.fit   SSE.fit SSE.OOB f.score.OOB
+## 2       NA  0.5354750           NA 28470.053      32   0.9490446
+## 3       NA  0.5064421           NA 38394.881      34   0.9456869
+## 1       NA -0.3064767           NA  6762.359      90          NA
 ```
 
 ```r
@@ -1269,8 +1293,11 @@ if (glb_is_regression)
                     size=3.5))
 
 if (glb_is_classification)
-    #print("Display plot to evaluate classification models")
     print(myplot_hbar(df=glb_models_df, xcol_name="feats", ycol_names="f.score.OOB"))
+```
+
+```
+## Warning: Removed 1 rows containing missing values (position_stack).
 ```
 
 ![](MoneyBall_Playoffs_files/figure-html/run_models-1.png) 
