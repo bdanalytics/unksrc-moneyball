@@ -2,7 +2,11 @@
 bdanalytics  
 
 **  **    
+<<<<<<< HEAD
 **Date: (Thu) Mar 19, 2015**    
+=======
+**Date: (Tue) Mar 17, 2015**    
+>>>>>>> e180ec29c2380d846d6346d27cb76ee5bf6e6724
 
 # Introduction:  
 
@@ -32,7 +36,10 @@ source("~/Dropbox/datascience/R/mydsutils.R")
 source("~/Dropbox/datascience/R/myplot.R")
 source("~/Dropbox/datascience/R/mypetrinet.R")
 # Gather all package requirements here
+<<<<<<< HEAD
 suppressPackageStartupMessages(require(plyr))
+=======
+>>>>>>> e180ec29c2380d846d6346d27cb76ee5bf6e6724
 suppressPackageStartupMessages(require(reshape2))
 
 #require(sos); findFn("pinv", maxPages=2, sortby="MaxScore")
@@ -41,6 +48,7 @@ suppressPackageStartupMessages(require(reshape2))
 glb_is_separate_predict_dataset <- FALSE    # or TRUE
 glb_predct_var <- "Playoffs"           # or NULL
 glb_predct_var_name <- paste0(glb_predct_var, ".predict")
+<<<<<<< HEAD
 glb_id_vars <- c("Team", "Year")                    # or NULL
 
 # List vars that are missing in glb_entity_df
@@ -51,6 +59,10 @@ glb_exclude_vars_as_features <- union(glb_exclude_vars_as_features,
                                         "Team_fctr")
                                       ) # or NULL
 
+=======
+glb_id_vars <- c("Team", "Year")                    # or NULL                      
+glb_exclude_vars_as_features <- NULL
+>>>>>>> e180ec29c2380d846d6346d27cb76ee5bf6e6724
 glb_is_classification <- TRUE; glb_is_regression <- !glb_is_classification
 
 script_df <- data.frame(chunk_label="import_data", chunk_step_major=1, chunk_step_minor=0)
@@ -293,17 +305,24 @@ print(script_df)
 #
 #       Build splines   require(splines); bsBasis <- bs(training$age, df=3)
 
+<<<<<<< HEAD
 glb_entity_df <- mutate(glb_entity_df,
 #     <col_name>.NA=is.na(<col_name>) 
     Team_fctr=factor(Team, 
                 as.factor(union(glb_entity_df$Team, glb_predct_df$Team))),
     League_fctr=factor(League, 
                 as.factor(union(glb_entity_df$League, glb_predct_df$League)))
+=======
+# glb_entity_df <- mutate(glb_entity_df,
+#     <col_name>.NA=is.na(<col_name>) 
+#     <col_name>_fctr=as.factor(<col_name>),
+>>>>>>> e180ec29c2380d846d6346d27cb76ee5bf6e6724
 #     
 #     Date.my=as.Date(strptime(Date, "%m/%d/%y %H:%M")),
 #     Year=year(Date.my),
 #     Month=months(Date.my),
 #     Weekday=weekdays(Date.my)
+<<<<<<< HEAD
     
                     )
 glb_entity_df$Team_fctr_num <- sapply(1:nrow(glb_entity_df), 
@@ -321,6 +340,13 @@ glb_predct_df <- mutate(glb_predct_df,
 glb_predct_df$Team_fctr_num <- sapply(1:nrow(glb_predct_df), 
     function(row_ix) grep(glb_predct_df[row_ix, "Team"],
                           levels(glb_predct_df[row_ix, "Team_fctr"])))
+=======
+#     
+#                     )
+# 
+# glb_predct_df <- mutate(glb_predct_df, 
+#                     )
+>>>>>>> e180ec29c2380d846d6346d27cb76ee5bf6e6724
 
 print(summary(glb_entity_df))
 ```
@@ -350,6 +376,7 @@ print(summary(glb_entity_df))
 ##  3rd Qu.:0.2670   3rd Qu.:0.0000   3rd Qu.:4.000   3rd Qu.:3.000  
 ##  Max.   :0.2940   Max.   :1.0000   Max.   :8.000   Max.   :4.000  
 ##                                    NA's   :748     NA's   :748    
+<<<<<<< HEAD
 ##        G              OOBP             OSLG          Team_fctr  
 ##  Min.   :158.0   Min.   :0.3010   Min.   :0.3770   BAL    : 36  
 ##  1st Qu.:162.0   1st Qu.:0.3290   1st Qu.:0.4160   BOS    : 36  
@@ -366,6 +393,16 @@ print(summary(glb_entity_df))
 ##              3rd Qu.:24.0  
 ##              Max.   :36.0  
 ## 
+=======
+##        G              OOBP             OSLG       
+##  Min.   :158.0   Min.   :0.3010   Min.   :0.3770  
+##  1st Qu.:162.0   1st Qu.:0.3290   1st Qu.:0.4160  
+##  Median :162.0   Median :0.3420   Median :0.4325  
+##  Mean   :161.9   Mean   :0.3405   Mean   :0.4325  
+##  3rd Qu.:162.0   3rd Qu.:0.3500   3rd Qu.:0.4508  
+##  Max.   :165.0   Max.   :0.3840   Max.   :0.4990  
+##                  NA's   :812      NA's   :812
+>>>>>>> e180ec29c2380d846d6346d27cb76ee5bf6e6724
 ```
 
 ```r
@@ -373,6 +410,7 @@ print(sapply(names(glb_entity_df), function(col) sum(is.na(glb_entity_df[, col])
 ```
 
 ```
+<<<<<<< HEAD
 ##          Team        League          Year            RS            RA 
 ##             0             0             0             0             0 
 ##             W           OBP           SLG            BA      Playoffs 
@@ -381,6 +419,14 @@ print(sapply(names(glb_entity_df), function(col) sum(is.na(glb_entity_df[, col])
 ##           748           748             0           812           812 
 ##     Team_fctr   League_fctr Team_fctr_num 
 ##             0             0             0
+=======
+##         Team       League         Year           RS           RA 
+##            0            0            0            0            0 
+##            W          OBP          SLG           BA     Playoffs 
+##            0            0            0            0            0 
+##   RankSeason RankPlayoffs            G         OOBP         OSLG 
+##          748          748            0          812          812
+>>>>>>> e180ec29c2380d846d6346d27cb76ee5bf6e6724
 ```
 
 ```r
@@ -412,6 +458,7 @@ print(summary(glb_predct_df))
 ##  3rd Qu.:0.2700   3rd Qu.:1.0000   3rd Qu.:5.000   3rd Qu.:4.000  
 ##  Max.   :0.2900   Max.   :1.0000   Max.   :7.000   Max.   :5.000  
 ##                                    NA's   :240     NA's   :240    
+<<<<<<< HEAD
 ##        G            OOBP            OSLG          Team_fctr  
 ##  Min.   :161   Min.   :0.294   Min.   :0.3460   ARI    : 11  
 ##  1st Qu.:162   1st Qu.:0.319   1st Qu.:0.3990   ATL    : 11  
@@ -427,6 +474,15 @@ print(summary(glb_predct_df))
 ##  Mean   :17.08              
 ##  3rd Qu.:24.75              
 ##  Max.   :39.00              
+=======
+##        G            OOBP            OSLG       
+##  Min.   :161   Min.   :0.294   Min.   :0.3460  
+##  1st Qu.:162   1st Qu.:0.319   1st Qu.:0.3990  
+##  Median :162   Median :0.329   Median :0.4150  
+##  Mean   :162   Mean   :0.330   Mean   :0.4163  
+##  3rd Qu.:162   3rd Qu.:0.340   3rd Qu.:0.4328  
+##  Max.   :163   Max.   :0.372   Max.   :0.4830  
+>>>>>>> e180ec29c2380d846d6346d27cb76ee5bf6e6724
 ## 
 ```
 
@@ -435,6 +491,7 @@ print(sapply(names(glb_predct_df), function(col) sum(is.na(glb_predct_df[, col])
 ```
 
 ```
+<<<<<<< HEAD
 ##          Team        League          Year            RS            RA 
 ##             0             0             0             0             0 
 ##             W           OBP           SLG            BA      Playoffs 
@@ -443,6 +500,14 @@ print(sapply(names(glb_predct_df), function(col) sum(is.na(glb_predct_df[, col])
 ##           240           240             0             0             0 
 ##     Team_fctr Team_fctr_num   League_fctr 
 ##             0             0             0
+=======
+##         Team       League         Year           RS           RA 
+##            0            0            0            0            0 
+##            W          OBP          SLG           BA     Playoffs 
+##            0            0            0            0            0 
+##   RankSeason RankPlayoffs            G         OOBP         OSLG 
+##          240          240            0            0            0
+>>>>>>> e180ec29c2380d846d6346d27cb76ee5bf6e6724
 ```
 
 ```r
@@ -1105,6 +1170,7 @@ glb_models_df <- data.frame()
 # print(orderBy(~ -R.sq.OOB -Adj.R.sq.fit, 
 #               glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
 
+<<<<<<< HEAD
 if (glb_is_regression) {
     ret_lst <- myrun_mdl_lm(indep_vars_vctr=glb_feats_df$id,
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)
@@ -1113,6 +1179,11 @@ if (glb_is_regression) {
               glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
     glb_sel_mdl <- mdl
 }    
+=======
+if (glb_is_regression)
+    ret_lst <- myrun_mdl_lm(indep_vars_vctr=glb_feats_df$id,
+                            fit_df=glb_entity_df, OOB_df=glb_predct_df)
+>>>>>>> e180ec29c2380d846d6346d27cb76ee5bf6e6724
 
 #   Classification:
 #       Logit Regression:
@@ -1124,6 +1195,7 @@ if (glb_is_regression) {
 # print(summary(mdl <- ret_lst$model)); 
 # print(orderBy(~ -R.sq.OOB -Adj.R.sq.fit, 
 #               glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
+<<<<<<< HEAD
 
 if (glb_is_classification) {
     # Highest cor.y
@@ -1183,6 +1255,69 @@ if (glb_is_classification) {
 ## 1     W   902       NA 0.4919257           NA 7723.216      35       0.944
 ## [1] 32
 ## [1] 0.535475
+=======
+mybuild_models_df_row <- function(indep_vars_vctr, fit_df, mdl, R.sq.OOB, 
+                                  Adj.R.sq.fit, SSE.fit, SSE.OOB)
+{
+    return(data.frame(feats=paste(indep_vars_vctr, collapse=", "),
+        #call.formula=toString(summary(mdl)$call$formula),
+        n.fit=nrow(fit_df),
+        R.sq.fit=ifelse(is.null(summary(mdl)$r.squared), NA, summary(mdl)$r.squared),
+        R.sq.OOB=R.sq.OOB,
+        Adj.R.sq.fit=ifelse(is.null(summary(mdl)$adj.r.squared), NA, 
+                            summary(mdl)$r.squared),
+        SSE.fit=sum(mdl$residuals ^ 2),
+        SSE.OOB=SSE.OOB)
+    )
+}    
+
+myrun_mdl_glm <- function(indep_vars_vctr, fit_df=NULL, OOB_df=NULL) {
+    
+    if (length(indep_vars_vctr) == 1)
+        if (indep_vars_vctr == ".")
+    	    indep_vars_vctr <- setdiff(names(fit_df), glb_predct_var)
+    
+    mdl <- glm(reformulate(indep_vars_vctr, 
+                            response=glb_predct_var), data=fit_df, 
+               family="binomial")
+    if (!is.null(OOB_df)) {
+    	OOB_df[, glb_predct_var_name] <- predict(mdl, newdata=OOB_df)
+		print(SSE.OOB <- sum((OOB_df[, glb_predct_var_name] - 
+							  OOB_df[, glb_predct_var]) ^ 2))
+		print(R.sq.OOB <- 1 - (SSE.OOB * 1.0 / 
+							sum((OOB_df[, glb_predct_var] - 
+								#mean(OOB_df[, glb_predct_var])
+								mean(mdl$fitted.values)    
+							) ^ 2)))	
+    } else {SSE.OOB <- NA; R.sq.OOB <- NA}
+    
+#   s2T <- sum(anova(mdl)[[2]]) / sum(anova(mdl)[[1]])
+# 	MSE <- anova(mdl)[[3]][2]
+# 	print(adj.R2 <- (s2T - MSE) / s2T)
+#	adj.R2 undefined for OOB ?
+                           
+    lcl_models_df <- mybuild_models_df_row(indep_vars_vctr, fit_df, mdl, 
+                                           R.sq.OOB, Adj.R.sq.fit, SSE.fit, 
+                                           SSE.OOB)
+    return(list("model"=mdl, "models_df"=lcl_models_df))
+}
+
+if (glb_is_classification)
+    ret_lst <- myrun_mdl_glm(indep_vars_vctr=glb_feats_df$id,
+                            fit_df=glb_entity_df, OOB_df=glb_predct_df)
+```
+
+```
+## [1] 9094.775
+## [1] -131.0235
+```
+
+```r
+print(summary(mdl <- ret_lst$model)); 
+```
+
+```
+>>>>>>> e180ec29c2380d846d6346d27cb76ee5bf6e6724
 ## 
 ## Call:
 ## glm(formula = reformulate(indep_vars_vctr, response = glb_predct_var), 
@@ -1210,6 +1345,7 @@ if (glb_is_classification) {
 ## AIC: 333.71
 ## 
 ## Number of Fisher Scoring iterations: 8
+<<<<<<< HEAD
 ## 
 ##                feats n.fit R.sq.fit  R.sq.OOB Adj.R.sq.fit   SSE.fit
 ## 2 Year, RS, RA, W, G   902       NA 0.5354750           NA 28470.053
@@ -1263,17 +1399,45 @@ if (glb_is_classification) {
 ```
 
 ```r
+=======
+```
+
+```r
+print(orderBy(~ -R.sq.OOB -Adj.R.sq.fit, 
+              glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
+```
+
+```
+##                feats n.fit R.sq.fit  R.sq.OOB Adj.R.sq.fit  SSE.fit
+## 1 Year, RS, RA, W, G   902       NA -131.0235           NA 28470.05
+##    SSE.OOB
+## 1 9094.775
+```
+
+```r
+glb_sel_mdl <- mdl
+
+>>>>>>> e180ec29c2380d846d6346d27cb76ee5bf6e6724
 if (glb_is_regression)
     print(myplot_scatter(glb_models_df, "Adj.R.sq.fit", "R.sq.OOB") + 
           geom_text(aes(label=feats), data=glb_models_df, color="NavyBlue", 
                     size=3.5))
 
 if (glb_is_classification)
+<<<<<<< HEAD
     #print("Display plot to evaluate classification models")
     print(myplot_hbar(df=glb_models_df, xcol_name="feats", ycol_names="f.score.OOB"))
 ```
 
 ![](MoneyBall_Playoffs_files/figure-html/run_models-1.png) 
+=======
+    print("Display plot to evaluate classification models")
+```
+
+```
+## [1] "Display plot to evaluate classification models"
+```
+>>>>>>> e180ec29c2380d846d6346d27cb76ee5bf6e6724
 
 ```r
 script_df <- rbind(script_df, 
@@ -1447,14 +1611,23 @@ We reject the null hypothesis i.e. we have evidence to conclude that am_fctr imp
 ## [1] stats     graphics  grDevices utils     datasets  methods   base     
 ## 
 ## other attached packages:
+<<<<<<< HEAD
 ## [1] reshape2_1.4.1  plyr_1.8.1      doBy_4.5-13     survival_2.38-1
 ## [5] ggplot2_1.0.0  
+=======
+## [1] reshape2_1.4.1  doBy_4.5-13     survival_2.38-1 ggplot2_1.0.0  
+>>>>>>> e180ec29c2380d846d6346d27cb76ee5bf6e6724
 ## 
 ## loaded via a namespace (and not attached):
 ##  [1] codetools_0.2-10 colorspace_1.2-5 digest_0.6.8     evaluate_0.5.5  
 ##  [5] formatR_1.0      grid_3.1.2       gtable_0.1.2     htmltools_0.2.6 
+<<<<<<< HEAD
 ##  [9] knitr_1.9        labeling_0.3     lattice_0.20-30  MASS_7.3-39     
 ## [13] Matrix_1.1-5     munsell_0.4.2    proto_0.3-10     Rcpp_0.11.4     
+=======
+##  [9] knitr_1.9        lattice_0.20-30  MASS_7.3-39      Matrix_1.1-5    
+## [13] munsell_0.4.2    plyr_1.8.1       proto_0.3-10     Rcpp_0.11.4     
+>>>>>>> e180ec29c2380d846d6346d27cb76ee5bf6e6724
 ## [17] rmarkdown_0.5.1  scales_0.2.4     splines_3.1.2    stringr_0.6.2   
 ## [21] tcltk_3.1.2      tools_3.1.2      yaml_2.1.13
 ```
