@@ -293,6 +293,7 @@ print(script_df)
 #
 #       Build splines   require(splines); bsBasis <- bs(training$age, df=3)
 
+# Change "_" to "." in df column names
 glb_entity_df <- mutate(glb_entity_df,
 #     <col_name>.NA=is.na(<col_name>) 
     Team_fctr=factor(Team, 
@@ -1327,13 +1328,18 @@ print(script_df)
 ## Step `6`: fit training.all
 
 ```r
-if (glb_is_regression)
+if (glb_is_regression) {
     ret_lst <- myrun_mdl_lm(indep_vars_vctr=glb_feats_df$id, fit_df=glb_entity_df)
+    print(summary(mdl <- ret_lst$model)); print(glb_sel_mdl_df <- ret_lst$models_df)
+    glb_entity_df[, glb_predct_var_name] <- predict(mdl, newdata=glb_entity_df)
+}    
 
-if (glb_is_classification)
+if (glb_is_classification) {
     ret_lst <- myrun_mdl_glm(indep_vars_vctr=glb_feats_df$id, fit_df=glb_entity_df)
-
-print(summary(mdl <- ret_lst$model)); print(glb_sel_mdl_df <- ret_lst$models_df)
+    print(summary(mdl <- ret_lst$model)); print(glb_sel_mdl_df <- ret_lst$models_df)
+    glb_entity_df[, glb_predct_var_name] <- (predict(mdl, 
+                        newdata=glb_entity_df, type="response") >= 0.5) * 1.0
+}    
 ```
 
 ```
@@ -1364,16 +1370,113 @@ print(summary(mdl <- ret_lst$model)); print(glb_sel_mdl_df <- ret_lst$models_df)
 ## AIC: 333.71
 ## 
 ## Number of Fisher Scoring iterations: 8
-```
-
-```
+## 
 ##                feats n.fit R.sq.fit R.sq.OOB Adj.R.sq.fit  SSE.fit SSE.OOB
 ## 1 Year, RS, RA, W, G   902       NA       NA           NA 28470.05      NA
+##   f.score.OOB
+## 1          NA
 ```
 
 ```r
 glb_sel_mdl <- mdl
+print(plot_vars_df <- as.data.frame(summary(glb_sel_mdl)$coefficients))
+```
 
+```
+##                  Estimate   Std. Error   z value     Pr(>|z|)
+## (Intercept) -1.435131e+02 46.801242543 -3.066438 2.166259e-03
+## Year         7.621930e-02  0.016098237  4.734636 2.194483e-06
+## RS           6.540223e-03  0.004287781  1.525317 1.271802e-01
+## RA          -6.595071e-03  0.004696343 -1.404299 1.602298e-01
+## W            3.373726e-01  0.046124166  7.314444 2.584496e-13
+## G           -2.438876e-01  0.209527340 -1.163989 2.444284e-01
+```
+
+```r
+names(plot_vars_df)[length(names(plot_vars_df))] <- "Pr.z"
+# Get rid of (Intercept)
+print(plot_vars_df <- orderBy(~Pr.z, plot_vars_df[2:nrow(plot_vars_df),]))
+```
+
+```
+##          Estimate  Std. Error   z value         Pr.z
+## W     0.337372619 0.046124166  7.314444 2.584496e-13
+## Year  0.076219296 0.016098237  4.734636 2.194483e-06
+## RS    0.006540223 0.004287781  1.525317 1.271802e-01
+## RA   -0.006595071 0.004696343 -1.404299 1.602298e-01
+## G    -0.243887578 0.209527340 -1.163989 2.444284e-01
+```
+
+```r
+#print(plot_vars_df <- subset(plot_vars_df, Pr.z < 0.1))
+plot_vars_df$id <- rownames(plot_vars_df)
+print(plot_vars_df)
+```
+
+```
+##          Estimate  Std. Error   z value         Pr.z   id
+## W     0.337372619 0.046124166  7.314444 2.584496e-13    W
+## Year  0.076219296 0.016098237  4.734636 2.194483e-06 Year
+## RS    0.006540223 0.004287781  1.525317 1.271802e-01   RS
+## RA   -0.006595071 0.004696343 -1.404299 1.602298e-01   RA
+## G    -0.243887578 0.209527340 -1.163989 2.444284e-01    G
+```
+
+```r
+print(glb_feats_df <- orderBy(~Pr.z, merge(glb_feats_df, 
+                                           plot_vars_df[,c("id", "Pr.z")])))
+```
+
+```
+##     id        cor.y         Pr.z
+## 4    W  0.588978323 2.584496e-13
+## 5 Year  0.113013647 2.194483e-06
+## 3   RS  0.371630900 1.271802e-01
+## 2   RA -0.241213487 1.602298e-01
+## 1    G  0.009831081 2.444284e-01
+```
+
+```r
+for (var in subset(glb_feats_df, Pr.z < 0.1)$id) {
+    plot_df <- melt(glb_entity_df, id.vars=var, 
+                    measure.vars=c(glb_predct_var, glb_predct_var_name))
+    if (var == "W")
+        print(myplot_scatter(plot_df, var, "value", 
+                             facet_colcol_name="variable") + 
+                  geom_vline(xintercept=95, linetype = "dotted"))    
+    else
+        print(myplot_scatter(plot_df, var, "value", 
+                             facet_colcol_name="variable"))    
+}
+```
+
+![](MoneyBall_Playoffs_files/figure-html/fit_training.all-1.png) ![](MoneyBall_Playoffs_files/figure-html/fit_training.all-2.png) 
+
+```r
+myplot_prediction_classification <- function(df, feat_x, feat_y) {
+    plot_df <- df
+    plot_df[, paste0(glb_predct_var, ".fctr")] <- as.factor(plot_df[,glb_predct_var])
+    plot_df[, paste0(glb_predct_var_name, ".err")] <- 
+        (plot_df[,glb_predct_var] != plot_df[,glb_predct_var_name])
+    return(ggplot(plot_df, aes_string(x=feat_x, y=feat_y)) +
+            geom_point(aes_string(color=paste0(glb_predct_var, ".fctr"),
+                                  shape=paste0(glb_predct_var_name, ".err")), 
+                       position="jitter") + 
+            facet_wrap(reformulate(paste0(glb_predct_var_name, ".err")))
+          )    
+}
+
+if (glb_is_classification) {
+    plot_vars_df <- subset(glb_feats_df, Pr.z < 0.1)
+    print(myplot_prediction_classification(glb_entity_df, plot_vars_df$id[1],
+                                           plot_vars_df$id[2]) + 
+            geom_vline(xintercept=95, linetype = "dotted"))
+}    
+```
+
+![](MoneyBall_Playoffs_files/figure-html/fit_training.all-3.png) 
+
+```r
 script_df <- rbind(script_df, 
                    data.frame(chunk_label="predict_newdata", 
                               chunk_step_major=max(script_df$chunk_step_major)+1, 
@@ -1419,12 +1522,12 @@ myprint_df(glb_predct_df[, c(glb_id_vars, glb_predct_var, glb_predct_var_name)])
 ## 5  CHC 2012        0                0
 ## 6  CHW 2012        0                0
 ##     Team Year Playoffs Playoffs.predict
-## 60   WSN 2011        0                0
-## 107  MIN 2009        1                0
-## 149  TOR 2008        0                0
-## 230  OAK 2005        0                1
-## 314  KCR 2002        0                0
-## 315  LAD 2002        0                1
+## 44   LAA 2011        0                0
+## 78   NYM 2010        0                0
+## 96   CHW 2009        0                0
+## 129  COL 2008        0                0
+## 237  TBD 2005        0                0
+## 291  OAK 2003        1                1
 ##     Team Year Playoffs Playoffs.predict
 ## 325  SEA 2002        0                1
 ## 326  SFG 2002        1                1
@@ -1439,8 +1542,6 @@ if (glb_is_regression)
     print(myplot_scatter(glb_predct_df, glb_predct_var, glb_predct_var_name))
 
 if (glb_is_classification)
-#     print(table(glb_predct_df[, glb_predct_var], 
-#                 glb_predct_df[, glb_predct_var_name]))
     print(xtabs(reformulate(paste(glb_predct_var, glb_predct_var_name, sep=" + ")),
                 glb_predct_df))
 ```
@@ -1451,6 +1552,40 @@ if (glb_is_classification)
 ##        0 216  24
 ##        1   8  82
 ```
+
+```r
+for (var in subset(glb_feats_df, Pr.z < 0.1)$id) {
+    plot_df <- melt(glb_predct_df, id.vars=var, 
+                    measure.vars=c(glb_predct_var, glb_predct_var_name))
+    if (var == "W")
+        print(myplot_scatter(plot_df, var, "value", 
+                             facet_colcol_name="variable") + 
+                  geom_vline(xintercept=95, linetype = "dotted"))    
+    else
+        print(myplot_scatter(plot_df, var, "value", 
+                             facet_colcol_name="variable"))    
+}
+```
+
+![](MoneyBall_Playoffs_files/figure-html/predict_newdata-1.png) ![](MoneyBall_Playoffs_files/figure-html/predict_newdata-2.png) 
+
+```r
+# Add choose(, 2) functionality to select feature pairs to plot 
+if (glb_is_regression) {
+    # Add size=abs(glb_predct_var - glb_predct_varname)
+    print(myplot_scatter(glb_predct_df, plot_vars_df$feat[1], 
+                         plot_vars_df$feat[2]))
+}    
+
+if (glb_is_classification) {
+    plot_vars_df <- subset(glb_feats_df, Pr.z < 0.1)
+    print(myplot_prediction_classification(glb_predct_df, plot_vars_df$id[1],
+                                           plot_vars_df$id[2]) + 
+            geom_vline(xintercept=95, linetype = "dotted"))
+}    
+```
+
+![](MoneyBall_Playoffs_files/figure-html/predict_newdata-3.png) 
 
 Null Hypothesis ($\sf{H_{0}}$): mpg is not impacted by am_fctr.  
 The variance by am_fctr appears to be independent. 
@@ -1478,10 +1613,10 @@ We reject the null hypothesis i.e. we have evidence to conclude that am_fctr imp
 ## [5] ggplot2_1.0.0  
 ## 
 ## loaded via a namespace (and not attached):
-##  [1] colorspace_1.2-5 digest_0.6.8     evaluate_0.5.5   formatR_1.0     
-##  [5] grid_3.1.2       gtable_0.1.2     htmltools_0.2.6  knitr_1.9       
-##  [9] lattice_0.20-30  MASS_7.3-39      Matrix_1.1-5     munsell_0.4.2   
-## [13] proto_0.3-10     Rcpp_0.11.4      rmarkdown_0.5.1  scales_0.2.4    
-## [17] splines_3.1.2    stringr_0.6.2    tcltk_3.1.2      tools_3.1.2     
-## [21] yaml_2.1.13
+##  [1] codetools_0.2-10 colorspace_1.2-5 digest_0.6.8     evaluate_0.5.5  
+##  [5] formatR_1.0      grid_3.1.2       gtable_0.1.2     htmltools_0.2.6 
+##  [9] knitr_1.9        labeling_0.3     lattice_0.20-30  MASS_7.3-39     
+## [13] Matrix_1.1-5     munsell_0.4.2    proto_0.3-10     Rcpp_0.11.4     
+## [17] rmarkdown_0.5.1  scales_0.2.4     splines_3.1.2    stringr_0.6.2   
+## [21] tcltk_3.1.2      tools_3.1.2      yaml_2.1.13
 ```
