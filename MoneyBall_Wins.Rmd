@@ -1,6 +1,6 @@
 ---
 # Get YAML keywords from myYAML_ref.Rmd
-title: "MoneyBall: Playoffs classification"
+title: "MoneyBall: Wins regression"
 author: "bdanalytics"
 pandoc_args: ["+RTS", "-K64M", "-RTS"]
 
@@ -58,7 +58,7 @@ suppressPackageStartupMessages(require(reshape2))
 
 # Analysis control global variables
 glb_is_separate_predict_dataset <- FALSE    # or TRUE
-glb_predct_var <- "Playoffs"           # or NULL
+glb_predct_var <- "W"           # or NULL
 glb_predct_var_name <- paste0(glb_predct_var, ".predict")
 glb_id_vars <- c("Team", "Year")                    # or NULL
 
@@ -67,17 +67,21 @@ glb_exclude_vars_as_features <- c("RankSeason", "RankPlayoffs", "OOBP", "OSLG") 
 # List chrs converted into factors 
 glb_exclude_vars_as_features <- union(glb_exclude_vars_as_features, 
                                       c("Team", "League", 
-                                        "Team.fctr")
-                                      ) # or NULL
+                                        "Team.fctr")    # or NULL
+                                      )
+# List feats that shd be excluded due to known causation by prediction variable
+glb_exclude_vars_as_features <- union(glb_exclude_vars_as_features, 
+                                      c("Playoffs")     # or NULL
+                                      )
 
-glb_is_classification <- TRUE; glb_is_regression <- !glb_is_classification
+glb_is_regression <- TRUE; glb_is_classification <- !glb_is_regression
 
 script_df <- data.frame(chunk_label="import_data", chunk_step_major=1, chunk_step_minor=0)
 print(script_df)
 ```
 
 ## Step ``r script_df[nrow(script_df), "chunk_step_major"]``: import data
-```{r import_data, cache=TRUE}
+```{r import_data, cache=FALSE}
 glb_entity_all_df <- myimport_data(
     url="https://courses.edx.org/c4x/MITx/15.071x_2/asset/baseball.csv", 
     comment="glb_entity_all_df", print_diagn=TRUE)
@@ -101,7 +105,7 @@ print(script_df)
 ```
 
 ## Step ``r script_df[nrow(script_df), "chunk_step_major"]``: cleanse data
-```{r cleanse_data, cache=TRUE}
+```{r cleanse_data, cache=FALSE}
 
 script_df <- rbind(script_df, 
                    data.frame(chunk_label="inspect_explore_data", 
@@ -111,7 +115,7 @@ print(script_df)
 ```
 
 ### Step ``r script_df[nrow(script_df), "chunk_step_major"]``.``r script_df[nrow(script_df), "chunk_step_minor"]``: inspect/explore data
-```{r inspect_explore_data_1, cache=TRUE}
+```{r inspect_explore_data_1, cache=FALSE}
 #print(str(glb_entity_df))
 #View(glb_entity_df)
 
@@ -215,7 +219,7 @@ print(script_df)
 ```
 
 ### Step ``r script_df[nrow(script_df), "chunk_step_major"]``.``r script_df[nrow(script_df), "chunk_step_minor"]``: manage missing data
-```{r manage_missing_data_1, cache=TRUE}
+```{r manage_missing_data_1, cache=FALSE}
 
 script_df <- rbind(script_df, 
     data.frame(chunk_label="encode_retype_data", 
@@ -225,7 +229,7 @@ print(script_df)
 ```
 
 ### Step ``r script_df[nrow(script_df), "chunk_step_major"]``.``r script_df[nrow(script_df), "chunk_step_minor"]``: encode/retype data
-```{r encode_retype_data_1, cache=TRUE}
+```{r encode_retype_data_1, cache=FALSE}
 # map_<col_name>_df <- myimport_data(
 #     url="<map_url>", 
 #     comment="map_<col_name>_df", print_diagn=TRUE)
@@ -242,7 +246,7 @@ print(script_df)
 ```
 
 ## Step ``r script_df[nrow(script_df), "chunk_step_major"]``: extract features
-```{r extract_features, cache=TRUE}
+```{r extract_features, cache=FALSE}
 
 script_df <- rbind(script_df, 
                    data.frame(chunk_label="select_features", 
@@ -252,7 +256,7 @@ print(script_df)
 ```
 
 ## Step ``r script_df[nrow(script_df), "chunk_step_major"]``: select features
-```{r select_features, cache=TRUE}
+```{r select_features, cache=FALSE}
 print(glb_feats_df <- myselect_features())
 
 script_df <- rbind(script_df, 
@@ -263,7 +267,7 @@ print(script_df)
 ```
 
 ### Step ``r script_df[nrow(script_df), "chunk_step_major"]``.``r script_df[nrow(script_df), "chunk_step_minor"]``: remove correlated features
-```{r remove_correlated_features, cache=TRUE}
+```{r remove_correlated_features, cache=FALSE}
 print(glb_feats_df <- mydelete_cor_features())
 
 script_df <- rbind(script_df, 
@@ -274,20 +278,13 @@ print(script_df)
 ```
 
 ## Step ``r script_df[nrow(script_df), "chunk_step_major"]``: run models
-```{r run_models, cache=TRUE}
+```{r run_models, cache=FALSE}
 glb_models_df <- data.frame()
 
 #   Regression:
-#       Linear:
-
-#       Prep non-numerical vars before runing this
-# ret_lst <- myrun_mdl_lm(indep_vars_vctr=".", 
-#                         fit_df=glb_entity_df, OOB_df=glb_predct_df)
-# print(summary(mdl <- ret_lst$model)); 
-# print(orderBy(~ -R.sq.OOB -Adj.R.sq.fit, 
-#               glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
-
 if (glb_is_regression) {
+    #   Linear:
+    
     # Highest cor.y
     ret_lst <- myrun_mdl_lm(indep_vars_vctr=glb_feats_df$id[1],
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)
@@ -314,17 +311,9 @@ if (glb_is_regression) {
 }    
 
 #   Classification:
-#       Logit Regression:
-
-#       Need to change this to glm
-#       Prep non-numerical vars before runing this
-# ret_lst <- myrun_mdl_lm(indep_vars_vctr=".", 
-#                         fit_df=glb_entity_df, OOB_df=glb_predct_df)
-# print(summary(mdl <- ret_lst$model)); 
-# print(orderBy(~ -R.sq.OOB -Adj.R.sq.fit, 
-#               glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
-
 if (glb_is_classification) {
+    #   Logit Regression:
+    
     # Highest cor.y
     ret_lst <- myrun_mdl_glm(indep_vars_vctr=glb_feats_df$id[1],
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)        
@@ -366,7 +355,7 @@ print(script_df)
 ```
 
 ## Step ``r script_df[nrow(script_df), "chunk_step_major"]``: fit training.all
-```{r fit_training.all, cache=TRUE}
+```{r fit_training.all, cache=FALSE}
 if (glb_is_regression) {
     ret_lst <- myrun_mdl_lm(indep_vars_vctr=glb_feats_df$id, fit_df=glb_entity_df)
     print(summary(mdl <- ret_lst$model)); print(glb_sel_mdl_df <- ret_lst$models_df)
@@ -386,26 +375,21 @@ print(glb_feats_df <- mymerge_feats_Pr.z())
 for (var in subset(glb_feats_df, Pr.z < 0.1)$id) {
     plot_df <- melt(glb_entity_df, id.vars=var, 
                     measure.vars=c(glb_predct_var, glb_predct_var_name))
-    if (var == "W")
-        print(myplot_scatter(plot_df, var, "value", 
-                             facet_colcol_name="variable") + 
-                  geom_vline(xintercept=95, linetype = "dotted"))    
-    else
-        print(myplot_scatter(plot_df, var, "value", 
-                             facet_colcol_name="variable"))    
+    print(myplot_scatter(plot_df, var, "value", facet_colcol_name="variable"))    
 }
 
 if (glb_is_regression) {
     plot_vars_df <- subset(glb_feats_df, Pr.z < 0.1)
     print(myplot_prediction_regression(glb_entity_df, plot_vars_df$id[1],
-                                           plot_vars_df$id[2]))
+                                           plot_vars_df$id[2]) + 
+              geom_point(aes_string(color="League.fctr"))
+              )
 }    
 
 if (glb_is_classification) {
     plot_vars_df <- subset(glb_feats_df, Pr.z < 0.1)
     print(myplot_prediction_classification(glb_entity_df, plot_vars_df$id[1],
-                                           plot_vars_df$id[2]) + 
-            geom_vline(xintercept=95, linetype = "dotted"))
+                                           plot_vars_df$id[2]))
 }    
 
 script_df <- rbind(script_df, 
@@ -416,7 +400,7 @@ print(script_df)
 ```
 
 ## Step ``r script_df[nrow(script_df), "chunk_step_major"]``: predict newdata
-```{r predict_newdata, cache=TRUE}
+```{r predict_newdata, cache=FALSE}
 if (glb_is_regression)
     glb_predct_df[, glb_predct_var_name] <- predict(glb_sel_mdl, 
                                         newdata=glb_predct_df, type="response")
@@ -428,7 +412,8 @@ if (glb_is_classification)
 myprint_df(glb_predct_df[, c(glb_id_vars, glb_predct_var, glb_predct_var_name)])
 
 if (glb_is_regression)
-    print(myplot_scatter(glb_predct_df, glb_predct_var, glb_predct_var_name))
+    print(myplot_scatter(glb_predct_df, glb_predct_var, glb_predct_var_name, 
+                         smooth=TRUE))
 
 if (glb_is_classification)
     print(xtabs(reformulate(paste(glb_predct_var, glb_predct_var_name, sep=" + ")),
@@ -437,33 +422,28 @@ if (glb_is_classification)
 for (var in subset(glb_feats_df, Pr.z < 0.1)$id) {
     plot_df <- melt(glb_predct_df, id.vars=var, 
                     measure.vars=c(glb_predct_var, glb_predct_var_name))
-    if (var == "W")
-        print(myplot_scatter(plot_df, var, "value", 
-                             facet_colcol_name="variable") + 
-                  geom_vline(xintercept=95, linetype = "dotted"))    
-    else
-        print(myplot_scatter(plot_df, var, "value", 
-                             facet_colcol_name="variable"))    
+    print(myplot_scatter(plot_df, var, "value", facet_colcol_name="variable"))    
 }
 
 # Add choose(, 2) functionality to select feature pairs to plot 
 if (glb_is_regression) {
     plot_vars_df <- subset(glb_feats_df, Pr.z < 0.1)
-    print(myplot_prediction_regression(glb_predct_df, plot_vars_df$id[1],
-                                           plot_vars_df$id[2]))
+    print(myplot_prediction_regression(df=glb_predct_df, feat_x=plot_vars_df$id[1],
+                                           feat_y=plot_vars_df$id[2]) + 
+              geom_point(aes_string(color="League.fctr"))
+              )
 }    
 
 if (glb_is_classification) {
     plot_vars_df <- subset(glb_feats_df, Pr.z < 0.1)
     print(myplot_prediction_classification(glb_predct_df, plot_vars_df$id[1],
-                                           plot_vars_df$id[2]) + 
-            geom_vline(xintercept=95, linetype = "dotted"))
+                                           plot_vars_df$id[2]))
 }    
 ```
 
 Null Hypothesis ($\sf{H_{0}}$): mpg is not impacted by am_fctr.  
 The variance by am_fctr appears to be independent. 
-```{r q1, cache=TRUE}
+```{r q1, cache=FALSE}
 # print(t.test(subset(cars_df, am_fctr == "automatic")$mpg, 
 #              subset(cars_df, am_fctr == "manual")$mpg, 
 #              var.equal=FALSE)$conf)
