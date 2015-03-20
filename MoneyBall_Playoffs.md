@@ -1559,10 +1559,10 @@ We reject the null hypothesis i.e. we have evidence to conclude that am_fctr imp
 ## [5] ggplot2_1.0.0  
 ## 
 ## loaded via a namespace (and not attached):
-##  [1] codetools_0.2-10 colorspace_1.2-5 digest_0.6.8     evaluate_0.5.5  
-##  [5] formatR_1.0      grid_3.1.2       gtable_0.1.2     htmltools_0.2.6 
-##  [9] knitr_1.9        labeling_0.3     lattice_0.20-30  MASS_7.3-39     
-## [13] Matrix_1.1-5     munsell_0.4.2    proto_0.3-10     Rcpp_0.11.4     
-## [17] rmarkdown_0.5.1  scales_0.2.4     splines_3.1.2    stringr_0.6.2   
-## [21] tcltk_3.1.2      tools_3.1.2      yaml_2.1.13
+##  [1] colorspace_1.2-5 digest_0.6.8     evaluate_0.5.5   formatR_1.0     
+##  [5] grid_3.1.2       gtable_0.1.2     htmltools_0.2.6  knitr_1.9       
+##  [9] lattice_0.20-30  MASS_7.3-39      Matrix_1.1-5     munsell_0.4.2   
+## [13] proto_0.3-10     Rcpp_0.11.4      rmarkdown_0.5.1  scales_0.2.4    
+## [17] splines_3.1.2    stringr_0.6.2    tcltk_3.1.2      tools_3.1.2     
+## [21] yaml_2.1.13
 ```

@@ -57,6 +57,9 @@ glb_exclude_vars_as_features <- union(glb_exclude_vars_as_features,
 
 glb_is_regression <- TRUE; glb_is_classification <- !glb_is_regression
 
+glb_mdl <- glb_sel_mdl <- NULL
+glb_models_df <- data.frame()
+
 script_df <- data.frame(chunk_label="import_data", chunk_step_major=1, chunk_step_minor=0)
 print(script_df)
 ```
@@ -560,6 +563,109 @@ print(script_df)
 ## Step `3`: extract features
 
 ```r
+# Create new features that help prediction
+glb_entity_df <- mutate(glb_entity_df,
+    Runs.diff=RS - RA
+                    )
+
+glb_predct_df <- mutate(glb_predct_df,
+    Runs.diff=RS - RA
+                    )
+
+print(summary(glb_entity_df))
+```
+
+```
+##      Team              League               Year            RS        
+##  Length:902         Length:902         Min.   :1962   Min.   : 463.0  
+##  Class :character   Class :character   1st Qu.:1973   1st Qu.: 641.2  
+##  Mode  :character   Mode  :character   Median :1983   Median : 695.0  
+##                                        Mean   :1982   Mean   : 703.8  
+##                                        3rd Qu.:1992   3rd Qu.: 761.8  
+##                                        Max.   :2001   Max.   :1009.0  
+##                                                                       
+##        RA               W               OBP             SLG        
+##  Min.   : 472.0   Min.   : 40.00   Min.   :0.277   Min.   :0.3010  
+##  1st Qu.: 640.0   1st Qu.: 73.00   1st Qu.:0.314   1st Qu.:0.3680  
+##  Median : 697.0   Median : 81.00   Median :0.324   Median :0.3880  
+##  Mean   : 703.8   Mean   : 80.88   Mean   :0.325   Mean   :0.3904  
+##  3rd Qu.: 763.0   3rd Qu.: 89.00   3rd Qu.:0.335   3rd Qu.:0.4118  
+##  Max.   :1103.0   Max.   :116.00   Max.   :0.373   Max.   :0.4850  
+##                                                                    
+##        BA            Playoffs        RankSeason     RankPlayoffs  
+##  Min.   :0.2140   Min.   :0.0000   Min.   :1.000   Min.   :1.000  
+##  1st Qu.:0.2500   1st Qu.:0.0000   1st Qu.:2.000   1st Qu.:2.000  
+##  Median :0.2580   Median :0.0000   Median :2.500   Median :3.000  
+##  Mean   :0.2582   Mean   :0.1707   Mean   :2.792   Mean   :2.454  
+##  3rd Qu.:0.2670   3rd Qu.:0.0000   3rd Qu.:4.000   3rd Qu.:3.000  
+##  Max.   :0.2940   Max.   :1.0000   Max.   :8.000   Max.   :4.000  
+##                                    NA's   :748     NA's   :748    
+##        G              OOBP             OSLG          Team.fctr  
+##  Min.   :158.0   Min.   :0.3010   Min.   :0.3770   BAL    : 36  
+##  1st Qu.:162.0   1st Qu.:0.3290   1st Qu.:0.4160   BOS    : 36  
+##  Median :162.0   Median :0.3420   Median :0.4325   CHC    : 36  
+##  Mean   :161.9   Mean   :0.3405   Mean   :0.4325   CHW    : 36  
+##  3rd Qu.:162.0   3rd Qu.:0.3500   3rd Qu.:0.4508   CIN    : 36  
+##  Max.   :165.0   Max.   :0.3840   Max.   :0.4990   CLE    : 36  
+##                  NA's   :812      NA's   :812      (Other):686  
+##  League.fctr Team.fctr.num    Runs.diff      
+##  AL:462      Min.   : 1.0   Min.   :-331.00  
+##  NL:440      1st Qu.: 9.0   1st Qu.: -70.75  
+##              Median :17.0   Median :   3.00  
+##              Mean   :16.7   Mean   :   0.00  
+##              3rd Qu.:24.0   3rd Qu.:  69.75  
+##              Max.   :36.0   Max.   : 309.00  
+## 
+```
+
+```r
+print(summary(glb_predct_df))
+```
+
+```
+##      Team              League               Year            RS       
+##  Length:330         Length:330         Min.   :2002   Min.   :513.0  
+##  Class :character   Class :character   1st Qu.:2004   1st Qu.:696.2  
+##  Mode  :character   Mode  :character   Median :2007   Median :741.0  
+##                                        Mean   :2007   Mean   :745.9  
+##                                        3rd Qu.:2010   3rd Qu.:801.0  
+##                                        Max.   :2012   Max.   :968.0  
+##                                                                      
+##        RA              W               OBP              SLG        
+##  Min.   :529.0   Min.   : 43.00   Min.   :0.2920   Min.   :0.3390  
+##  1st Qu.:687.2   1st Qu.: 72.00   1st Qu.:0.3210   1st Qu.:0.3992  
+##  Median :742.5   Median : 81.50   Median :0.3310   Median :0.4160  
+##  Mean   :745.9   Mean   : 80.97   Mean   :0.3301   Mean   :0.4163  
+##  3rd Qu.:801.0   3rd Qu.: 90.00   3rd Qu.:0.3390   3rd Qu.:0.4330  
+##  Max.   :971.0   Max.   :105.00   Max.   :0.3660   Max.   :0.4910  
+##                                                                    
+##        BA            Playoffs        RankSeason     RankPlayoffs  
+##  Min.   :0.2330   Min.   :0.0000   Min.   :1.000   Min.   :1.000  
+##  1st Qu.:0.2550   1st Qu.:0.0000   1st Qu.:2.000   1st Qu.:3.000  
+##  Median :0.2630   Median :0.0000   Median :4.000   Median :4.000  
+##  Mean   :0.2623   Mean   :0.2727   Mean   :3.689   Mean   :3.167  
+##  3rd Qu.:0.2700   3rd Qu.:1.0000   3rd Qu.:5.000   3rd Qu.:4.000  
+##  Max.   :0.2900   Max.   :1.0000   Max.   :7.000   Max.   :5.000  
+##                                    NA's   :240     NA's   :240    
+##        G            OOBP            OSLG          Team.fctr   League.fctr
+##  Min.   :161   Min.   :0.294   Min.   :0.3460   ARI    : 11   AL:154     
+##  1st Qu.:162   1st Qu.:0.319   1st Qu.:0.3990   ATL    : 11   NL:176     
+##  Median :162   Median :0.329   Median :0.4150   BAL    : 11              
+##  Mean   :162   Mean   :0.330   Mean   :0.4163   BOS    : 11              
+##  3rd Qu.:162   3rd Qu.:0.340   3rd Qu.:0.4328   CHC    : 11              
+##  Max.   :163   Max.   :0.372   Max.   :0.4830   CHW    : 11              
+##                                                 (Other):264              
+##  Team.fctr.num     Runs.diff      
+##  Min.   : 1.00   Min.   :-337.00  
+##  1st Qu.: 9.00   1st Qu.: -81.25  
+##  Median :16.00   Median :   7.00  
+##  Mean   :17.08   Mean   :   0.00  
+##  3rd Qu.:24.75   3rd Qu.:  81.75  
+##  Max.   :39.00   Max.   : 210.00  
+## 
+```
+
+```r
 script_df <- rbind(script_df, 
                    data.frame(chunk_label="select_features", 
                               chunk_step_major=max(script_df$chunk_step_major)+1, 
@@ -585,11 +691,8 @@ print(glb_feats_df <- myselect_features())
 ```
 
 ```
-## Warning in myselect_features(): Ignoring features due to NAs:
-```
-
-```
 ##                          id        cor.y   cor.y.abs
+## Runs.diff         Runs.diff  0.938514982 0.938514982
 ## RA                       RA -0.507771762 0.507771762
 ## RS                       RS  0.507382436 0.507382436
 ## OBP                     OBP  0.474079772 0.474079772
@@ -627,42 +730,56 @@ print(glb_feats_df <- mydelete_cor_features())
 ```
 
 ```
-##                        RA          RS          OBP           BA
-## RA             1.00000000  0.41501351  0.367105468  0.350410982
-## RS             0.41501351  1.00000000  0.904909154  0.831624752
-## OBP            0.36710547  0.90490915  1.000000000  0.854054862
-## BA             0.35041098  0.83162475  0.854054862  1.000000000
-## SLG            0.45951445  0.92638433  0.806153882  0.814068123
-## G             -0.03740167  0.05620616 -0.003826664 -0.001805097
-## Team.fctr.num -0.02090139 -0.10979890 -0.110205673 -0.102984441
-## Year           0.48307166  0.48550228  0.474798914  0.438729149
-##                       SLG            G Team.fctr.num       Year
-## RA             0.45951445 -0.037401665   -0.02090139  0.4830717
-## RS             0.92638433  0.056206164   -0.10979890  0.4855023
-## OBP            0.80615388 -0.003826664   -0.11020567  0.4747989
-## BA             0.81406812 -0.001805097   -0.10298444  0.4387291
-## SLG            1.00000000  0.012873458   -0.13987212  0.5178276
-## G              0.01287346  1.000000000    0.05287525 -0.0270849
-## Team.fctr.num -0.13987212  0.052875249    1.00000000 -0.0489125
-## Year           0.51782762 -0.027084904   -0.04891250  1.0000000
-##                       RA         RS         OBP          BA        SLG
-## RA            0.00000000 0.41501351 0.367105468 0.350410982 0.45951445
-## RS            0.41501351 0.00000000 0.904909154 0.831624752 0.92638433
-## OBP           0.36710547 0.90490915 0.000000000 0.854054862 0.80615388
-## BA            0.35041098 0.83162475 0.854054862 0.000000000 0.81406812
-## SLG           0.45951445 0.92638433 0.806153882 0.814068123 0.00000000
-## G             0.03740167 0.05620616 0.003826664 0.001805097 0.01287346
-## Team.fctr.num 0.02090139 0.10979890 0.110205673 0.102984441 0.13987212
-## Year          0.48307166 0.48550228 0.474798914 0.438729149 0.51782762
-##                         G Team.fctr.num      Year
-## RA            0.037401665    0.02090139 0.4830717
-## RS            0.056206164    0.10979890 0.4855023
-## OBP           0.003826664    0.11020567 0.4747989
-## BA            0.001805097    0.10298444 0.4387291
-## SLG           0.012873458    0.13987212 0.5178276
-## G             0.000000000    0.05287525 0.0270849
-## Team.fctr.num 0.052875249    0.00000000 0.0489125
-## Year          0.027084904    0.04891250 0.0000000
+##                 Runs.diff          RA          RS          OBP
+## Runs.diff      1.00000000 -0.54410520  0.53753945  0.494250528
+## RA            -0.54410520  1.00000000  0.41501351  0.367105468
+## RS             0.53753945  0.41501351  1.00000000  0.904909154
+## OBP            0.49425053  0.36710547  0.90490915  1.000000000
+## BA             0.44214168  0.35041098  0.83162475  0.854054862
+## SLG            0.42840773  0.45951445  0.92638433  0.806153882
+## G              0.08649718 -0.03740167  0.05620616 -0.003826664
+## Team.fctr.num -0.08188287 -0.02090139 -0.10979890 -0.110205673
+## Year           0.00000000  0.48307166  0.48550228  0.474798914
+##                         BA         SLG            G Team.fctr.num
+## Runs.diff      0.442141680  0.42840773  0.086497182   -0.08188287
+## RA             0.350410982  0.45951445 -0.037401665   -0.02090139
+## RS             0.831624752  0.92638433  0.056206164   -0.10979890
+## OBP            0.854054862  0.80615388 -0.003826664   -0.11020567
+## BA             1.000000000  0.81406812 -0.001805097   -0.10298444
+## SLG            0.814068123  1.00000000  0.012873458   -0.13987212
+## G             -0.001805097  0.01287346  1.000000000    0.05287525
+## Team.fctr.num -0.102984441 -0.13987212  0.052875249    1.00000000
+## Year           0.438729149  0.51782762 -0.027084904   -0.04891250
+##                     Year
+## Runs.diff      0.0000000
+## RA             0.4830717
+## RS             0.4855023
+## OBP            0.4747989
+## BA             0.4387291
+## SLG            0.5178276
+## G             -0.0270849
+## Team.fctr.num -0.0489125
+## Year           1.0000000
+##                Runs.diff         RA         RS         OBP          BA
+## Runs.diff     0.00000000 0.54410520 0.53753945 0.494250528 0.442141680
+## RA            0.54410520 0.00000000 0.41501351 0.367105468 0.350410982
+## RS            0.53753945 0.41501351 0.00000000 0.904909154 0.831624752
+## OBP           0.49425053 0.36710547 0.90490915 0.000000000 0.854054862
+## BA            0.44214168 0.35041098 0.83162475 0.854054862 0.000000000
+## SLG           0.42840773 0.45951445 0.92638433 0.806153882 0.814068123
+## G             0.08649718 0.03740167 0.05620616 0.003826664 0.001805097
+## Team.fctr.num 0.08188287 0.02090139 0.10979890 0.110205673 0.102984441
+## Year          0.00000000 0.48307166 0.48550228 0.474798914 0.438729149
+##                      SLG           G Team.fctr.num      Year
+## Runs.diff     0.42840773 0.086497182    0.08188287 0.0000000
+## RA            0.45951445 0.037401665    0.02090139 0.4830717
+## RS            0.92638433 0.056206164    0.10979890 0.4855023
+## OBP           0.80615388 0.003826664    0.11020567 0.4747989
+## BA            0.81406812 0.001805097    0.10298444 0.4387291
+## SLG           0.00000000 0.012873458    0.13987212 0.5178276
+## G             0.01287346 0.000000000    0.05287525 0.0270849
+## Team.fctr.num 0.13987212 0.052875249    0.00000000 0.0489125
+## Year          0.51782762 0.027084904    0.04891250 0.0000000
 ## [1] "cor(RS, SLG)=0.9264"
 ```
 
@@ -686,6 +803,7 @@ print(glb_feats_df <- mydelete_cor_features())
 
 ```
 ##                          id        cor.y   cor.y.abs
+## Runs.diff         Runs.diff  0.938514982 0.938514982
 ## RA                       RA -0.507771762 0.507771762
 ## RS                       RS  0.507382436 0.507382436
 ## OBP                     OBP  0.474079772 0.474079772
@@ -693,38 +811,42 @@ print(glb_feats_df <- mydelete_cor_features())
 ## G                         G  0.108128075 0.108128075
 ## Team.fctr.num Team.fctr.num -0.087036398 0.087036398
 ## Year                   Year  0.002755645 0.002755645
-##                        RA          RS          OBP           BA
-## RA             1.00000000  0.41501351  0.367105468  0.350410982
-## RS             0.41501351  1.00000000  0.904909154  0.831624752
-## OBP            0.36710547  0.90490915  1.000000000  0.854054862
-## BA             0.35041098  0.83162475  0.854054862  1.000000000
-## G             -0.03740167  0.05620616 -0.003826664 -0.001805097
-## Team.fctr.num -0.02090139 -0.10979890 -0.110205673 -0.102984441
-## Year           0.48307166  0.48550228  0.474798914  0.438729149
-##                          G Team.fctr.num       Year
-## RA            -0.037401665   -0.02090139  0.4830717
-## RS             0.056206164   -0.10979890  0.4855023
-## OBP           -0.003826664   -0.11020567  0.4747989
-## BA            -0.001805097   -0.10298444  0.4387291
-## G              1.000000000    0.05287525 -0.0270849
-## Team.fctr.num  0.052875249    1.00000000 -0.0489125
-## Year          -0.027084904   -0.04891250  1.0000000
-##                       RA         RS         OBP          BA           G
-## RA            0.00000000 0.41501351 0.367105468 0.350410982 0.037401665
-## RS            0.41501351 0.00000000 0.904909154 0.831624752 0.056206164
-## OBP           0.36710547 0.90490915 0.000000000 0.854054862 0.003826664
-## BA            0.35041098 0.83162475 0.854054862 0.000000000 0.001805097
-## G             0.03740167 0.05620616 0.003826664 0.001805097 0.000000000
-## Team.fctr.num 0.02090139 0.10979890 0.110205673 0.102984441 0.052875249
-## Year          0.48307166 0.48550228 0.474798914 0.438729149 0.027084904
-##               Team.fctr.num      Year
-## RA               0.02090139 0.4830717
-## RS               0.10979890 0.4855023
-## OBP              0.11020567 0.4747989
-## BA               0.10298444 0.4387291
-## G                0.05287525 0.0270849
-## Team.fctr.num    0.00000000 0.0489125
-## Year             0.04891250 0.0000000
+##                 Runs.diff          RA          RS          OBP
+## Runs.diff      1.00000000 -0.54410520  0.53753945  0.494250528
+## RA            -0.54410520  1.00000000  0.41501351  0.367105468
+## RS             0.53753945  0.41501351  1.00000000  0.904909154
+## OBP            0.49425053  0.36710547  0.90490915  1.000000000
+## BA             0.44214168  0.35041098  0.83162475  0.854054862
+## G              0.08649718 -0.03740167  0.05620616 -0.003826664
+## Team.fctr.num -0.08188287 -0.02090139 -0.10979890 -0.110205673
+## Year           0.00000000  0.48307166  0.48550228  0.474798914
+##                         BA            G Team.fctr.num       Year
+## Runs.diff      0.442141680  0.086497182   -0.08188287  0.0000000
+## RA             0.350410982 -0.037401665   -0.02090139  0.4830717
+## RS             0.831624752  0.056206164   -0.10979890  0.4855023
+## OBP            0.854054862 -0.003826664   -0.11020567  0.4747989
+## BA             1.000000000 -0.001805097   -0.10298444  0.4387291
+## G             -0.001805097  1.000000000    0.05287525 -0.0270849
+## Team.fctr.num -0.102984441  0.052875249    1.00000000 -0.0489125
+## Year           0.438729149 -0.027084904   -0.04891250  1.0000000
+##                Runs.diff         RA         RS         OBP          BA
+## Runs.diff     0.00000000 0.54410520 0.53753945 0.494250528 0.442141680
+## RA            0.54410520 0.00000000 0.41501351 0.367105468 0.350410982
+## RS            0.53753945 0.41501351 0.00000000 0.904909154 0.831624752
+## OBP           0.49425053 0.36710547 0.90490915 0.000000000 0.854054862
+## BA            0.44214168 0.35041098 0.83162475 0.854054862 0.000000000
+## G             0.08649718 0.03740167 0.05620616 0.003826664 0.001805097
+## Team.fctr.num 0.08188287 0.02090139 0.10979890 0.110205673 0.102984441
+## Year          0.00000000 0.48307166 0.48550228 0.474798914 0.438729149
+##                         G Team.fctr.num      Year
+## Runs.diff     0.086497182    0.08188287 0.0000000
+## RA            0.037401665    0.02090139 0.4830717
+## RS            0.056206164    0.10979890 0.4855023
+## OBP           0.003826664    0.11020567 0.4747989
+## BA            0.001805097    0.10298444 0.4387291
+## G             0.000000000    0.05287525 0.0270849
+## Team.fctr.num 0.052875249    0.00000000 0.0489125
+## Year          0.027084904    0.04891250 0.0000000
 ## [1] "cor(RS, OBP)=0.9049"
 ```
 
@@ -748,40 +870,45 @@ print(glb_feats_df <- mydelete_cor_features())
 
 ```
 ##                          id        cor.y   cor.y.abs
+## Runs.diff         Runs.diff  0.938514982 0.938514982
 ## RA                       RA -0.507771762 0.507771762
 ## RS                       RS  0.507382436 0.507382436
 ## BA                       BA  0.416391099 0.416391099
 ## G                         G  0.108128075 0.108128075
 ## Team.fctr.num Team.fctr.num -0.087036398 0.087036398
 ## Year                   Year  0.002755645 0.002755645
-##                        RA          RS           BA            G
-## RA             1.00000000  0.41501351  0.350410982 -0.037401665
-## RS             0.41501351  1.00000000  0.831624752  0.056206164
-## BA             0.35041098  0.83162475  1.000000000 -0.001805097
-## G             -0.03740167  0.05620616 -0.001805097  1.000000000
-## Team.fctr.num -0.02090139 -0.10979890 -0.102984441  0.052875249
-## Year           0.48307166  0.48550228  0.438729149 -0.027084904
-##               Team.fctr.num       Year
-## RA              -0.02090139  0.4830717
-## RS              -0.10979890  0.4855023
-## BA              -0.10298444  0.4387291
-## G                0.05287525 -0.0270849
-## Team.fctr.num    1.00000000 -0.0489125
-## Year            -0.04891250  1.0000000
-##                       RA         RS          BA           G Team.fctr.num
-## RA            0.00000000 0.41501351 0.350410982 0.037401665    0.02090139
-## RS            0.41501351 0.00000000 0.831624752 0.056206164    0.10979890
-## BA            0.35041098 0.83162475 0.000000000 0.001805097    0.10298444
-## G             0.03740167 0.05620616 0.001805097 0.000000000    0.05287525
-## Team.fctr.num 0.02090139 0.10979890 0.102984441 0.052875249    0.00000000
-## Year          0.48307166 0.48550228 0.438729149 0.027084904    0.04891250
-##                    Year
-## RA            0.4830717
-## RS            0.4855023
-## BA            0.4387291
-## G             0.0270849
-## Team.fctr.num 0.0489125
-## Year          0.0000000
+##                 Runs.diff          RA          RS           BA
+## Runs.diff      1.00000000 -0.54410520  0.53753945  0.442141680
+## RA            -0.54410520  1.00000000  0.41501351  0.350410982
+## RS             0.53753945  0.41501351  1.00000000  0.831624752
+## BA             0.44214168  0.35041098  0.83162475  1.000000000
+## G              0.08649718 -0.03740167  0.05620616 -0.001805097
+## Team.fctr.num -0.08188287 -0.02090139 -0.10979890 -0.102984441
+## Year           0.00000000  0.48307166  0.48550228  0.438729149
+##                          G Team.fctr.num       Year
+## Runs.diff      0.086497182   -0.08188287  0.0000000
+## RA            -0.037401665   -0.02090139  0.4830717
+## RS             0.056206164   -0.10979890  0.4855023
+## BA            -0.001805097   -0.10298444  0.4387291
+## G              1.000000000    0.05287525 -0.0270849
+## Team.fctr.num  0.052875249    1.00000000 -0.0489125
+## Year          -0.027084904   -0.04891250  1.0000000
+##                Runs.diff         RA         RS          BA           G
+## Runs.diff     0.00000000 0.54410520 0.53753945 0.442141680 0.086497182
+## RA            0.54410520 0.00000000 0.41501351 0.350410982 0.037401665
+## RS            0.53753945 0.41501351 0.00000000 0.831624752 0.056206164
+## BA            0.44214168 0.35041098 0.83162475 0.000000000 0.001805097
+## G             0.08649718 0.03740167 0.05620616 0.001805097 0.000000000
+## Team.fctr.num 0.08188287 0.02090139 0.10979890 0.102984441 0.052875249
+## Year          0.00000000 0.48307166 0.48550228 0.438729149 0.027084904
+##               Team.fctr.num      Year
+## Runs.diff        0.08188287 0.0000000
+## RA               0.02090139 0.4830717
+## RS               0.10979890 0.4855023
+## BA               0.10298444 0.4387291
+## G                0.05287525 0.0270849
+## Team.fctr.num    0.00000000 0.0489125
+## Year             0.04891250 0.0000000
 ## [1] "cor(RS, BA)=0.8316"
 ```
 
@@ -805,24 +932,42 @@ print(glb_feats_df <- mydelete_cor_features())
 
 ```
 ##                          id        cor.y   cor.y.abs
+## Runs.diff         Runs.diff  0.938514982 0.938514982
 ## RA                       RA -0.507771762 0.507771762
 ## RS                       RS  0.507382436 0.507382436
 ## G                         G  0.108128075 0.108128075
 ## Team.fctr.num Team.fctr.num -0.087036398 0.087036398
 ## Year                   Year  0.002755645 0.002755645
-##                        RA          RS           G Team.fctr.num       Year
-## RA             1.00000000  0.41501351 -0.03740167   -0.02090139  0.4830717
-## RS             0.41501351  1.00000000  0.05620616   -0.10979890  0.4855023
-## G             -0.03740167  0.05620616  1.00000000    0.05287525 -0.0270849
-## Team.fctr.num -0.02090139 -0.10979890  0.05287525    1.00000000 -0.0489125
-## Year           0.48307166  0.48550228 -0.02708490   -0.04891250  1.0000000
-##                       RA         RS          G Team.fctr.num      Year
-## RA            0.00000000 0.41501351 0.03740167    0.02090139 0.4830717
-## RS            0.41501351 0.00000000 0.05620616    0.10979890 0.4855023
-## G             0.03740167 0.05620616 0.00000000    0.05287525 0.0270849
-## Team.fctr.num 0.02090139 0.10979890 0.05287525    0.00000000 0.0489125
-## Year          0.48307166 0.48550228 0.02708490    0.04891250 0.0000000
+##                 Runs.diff          RA          RS           G
+## Runs.diff      1.00000000 -0.54410520  0.53753945  0.08649718
+## RA            -0.54410520  1.00000000  0.41501351 -0.03740167
+## RS             0.53753945  0.41501351  1.00000000  0.05620616
+## G              0.08649718 -0.03740167  0.05620616  1.00000000
+## Team.fctr.num -0.08188287 -0.02090139 -0.10979890  0.05287525
+## Year           0.00000000  0.48307166  0.48550228 -0.02708490
+##               Team.fctr.num       Year
+## Runs.diff       -0.08188287  0.0000000
+## RA              -0.02090139  0.4830717
+## RS              -0.10979890  0.4855023
+## G                0.05287525 -0.0270849
+## Team.fctr.num    1.00000000 -0.0489125
+## Year            -0.04891250  1.0000000
+##                Runs.diff         RA         RS          G Team.fctr.num
+## Runs.diff     0.00000000 0.54410520 0.53753945 0.08649718    0.08188287
+## RA            0.54410520 0.00000000 0.41501351 0.03740167    0.02090139
+## RS            0.53753945 0.41501351 0.00000000 0.05620616    0.10979890
+## G             0.08649718 0.03740167 0.05620616 0.00000000    0.05287525
+## Team.fctr.num 0.08188287 0.02090139 0.10979890 0.05287525    0.00000000
+## Year          0.00000000 0.48307166 0.48550228 0.02708490    0.04891250
+##                    Year
+## Runs.diff     0.0000000
+## RA            0.4830717
+## RS            0.4855023
+## G             0.0270849
+## Team.fctr.num 0.0489125
+## Year          0.0000000
 ##                          id        cor.y   cor.y.abs
+## Runs.diff         Runs.diff  0.938514982 0.938514982
 ## RA                       RA -0.507771762 0.507771762
 ## RS                       RS  0.507382436 0.507382436
 ## G                         G  0.108128075 0.108128075
@@ -854,8 +999,6 @@ print(script_df)
 ## Step `5`: run models
 
 ```r
-glb_models_df <- data.frame()
-
 #   Regression:
 if (glb_is_regression) {
     #   Linear:
@@ -863,32 +1006,27 @@ if (glb_is_regression) {
     # Highest cor.y
     ret_lst <- myrun_mdl_lm(indep_vars_vctr=glb_feats_df$id[1],
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)
-    print(summary(mdl <- ret_lst$model)); 
-    print(orderBy(~ -R.sq.OOB -Adj.R.sq.fit, 
-              glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
-
+    glb_sel_mdl <- glb_mdl
+    
     # Uncorrelated X
     ret_lst <- myrun_mdl_lm(indep_vars_vctr=glb_feats_df$id,
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)
-    print(summary(mdl <- ret_lst$model)); 
-    print(orderBy(~ -R.sq.OOB -Adj.R.sq.fit, 
-              glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
-    glb_sel_mdl <- mdl
     
     # All X that is not missing
     ret_lst <- myrun_mdl_lm(indep_vars_vctr=setdiff(setdiff(names(glb_entity_df),
                                                              glb_predct_var),
                                                      glb_exclude_vars_as_features),
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)
-    print(summary(mdl <- ret_lst$model)); 
-    print(orderBy(~ -R.sq.OOB -Adj.R.sq.fit, 
-              glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))    
+    
+    # RS, RA
+    ret_lst <- myrun_mdl_lm(indep_vars_vctr=c("RS", "RA"),
+                            fit_df=glb_entity_df, OOB_df=glb_predct_df)
 }    
 ```
 
 ```
-## [1] 29642.29
-## [1] 0.3331774
+## [1] 5519.514
+## [1] 0.8758349
 ## 
 ## Call:
 ## lm(formula = reformulate(indep_vars_vctr, response = glb_predct_var), 
@@ -896,23 +1034,31 @@ if (glb_is_regression) {
 ## 
 ## Residuals:
 ##      Min       1Q   Median       3Q      Max 
-## -27.9060  -6.6692   0.1744   6.7569  30.3763 
+## -14.2662  -2.6509   0.1234   2.9364  11.6570 
 ## 
 ## Coefficients:
-##               Estimate Std. Error t value Pr(>|t|)    
-## (Intercept) 124.335359   2.479183   50.15   <2e-16 ***
-## RA           -0.061741   0.003492  -17.68   <2e-16 ***
+##              Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) 80.881375   0.131157  616.67   <2e-16 ***
+## Runs.diff    0.105766   0.001297   81.55   <2e-16 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 9.829 on 900 degrees of freedom
-## Multiple R-squared:  0.2578,	Adjusted R-squared:  0.257 
-## F-statistic: 312.7 on 1 and 900 DF,  p-value: < 2.2e-16
+## Residual standard error: 3.939 on 900 degrees of freedom
+## Multiple R-squared:  0.8808,	Adjusted R-squared:  0.8807 
+## F-statistic:  6651 on 1 and 900 DF,  p-value: < 2.2e-16
 ## 
-##   feats n.fit  R.sq.fit  R.sq.OOB Adj.R.sq.fit  SSE.fit  SSE.OOB
-## 1    RA   902 0.2578322 0.3331774    0.2578322 86955.58 29642.29
+##       feats n.fit  R.sq.fit  R.sq.OOB Adj.R.sq.fit  SSE.fit  SSE.OOB
+## 1 Runs.diff   902 0.8808104 0.8758349    0.8808104 13964.77 5519.514
 ##   f.score.OOB
 ## 1          NA
+```
+
+```
+## Warning in predict.lm(mdl, newdata = OOB_df): prediction from a
+## rank-deficient fit may be misleading
+```
+
+```
 ## [1] 5541.619
 ## [1] 0.8753377
 ## 
@@ -924,14 +1070,15 @@ if (glb_is_regression) {
 ##      Min       1Q   Median       3Q      Max 
 ## -14.3272  -2.6507   0.1523   2.8854  11.6413 
 ## 
-## Coefficients:
-##                Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)    2.739170  41.274781   0.066    0.947    
-## RA            -0.105331   0.001645 -64.043   <2e-16 ***
-## RS             0.105440   0.001669  63.176   <2e-16 ***
-## G              0.453494   0.187855   2.414    0.016 *  
-## Team.fctr.num -0.015413   0.015186  -1.015    0.310    
-## Year           0.002471   0.013880   0.178    0.859    
+## Coefficients: (1 not defined because of singularities)
+##                 Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)    2.7391699 41.2747811   0.066    0.947    
+## Runs.diff      0.1054398  0.0016690  63.176   <2e-16 ***
+## RA             0.0001088  0.0020420   0.053    0.958    
+## RS                    NA         NA      NA       NA    
+## G              0.4534944  0.1878550   2.414    0.016 *  
+## Team.fctr.num -0.0154128  0.0151860  -1.015    0.310    
+## Year           0.0024714  0.0138798   0.178    0.859    
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
@@ -939,12 +1086,20 @@ if (glb_is_regression) {
 ## Multiple R-squared:  0.8817,	Adjusted R-squared:  0.881 
 ## F-statistic:  1335 on 5 and 896 DF,  p-value: < 2.2e-16
 ## 
-##                            feats n.fit  R.sq.fit  R.sq.OOB Adj.R.sq.fit
-## 2 RA, RS, G, Team.fctr.num, Year   902 0.8816921 0.8753377    0.8816921
-## 1                             RA   902 0.2578322 0.3331774    0.2578322
-##    SSE.fit   SSE.OOB f.score.OOB
-## 2 13861.46  5541.619          NA
-## 1 86955.58 29642.290          NA
+##                                       feats n.fit  R.sq.fit  R.sq.OOB
+## 1                                 Runs.diff   902 0.8808104 0.8758349
+## 2 Runs.diff, RA, RS, G, Team.fctr.num, Year   902 0.8816921 0.8753377
+##   Adj.R.sq.fit  SSE.fit  SSE.OOB f.score.OOB
+## 1    0.8808104 13964.77 5519.514          NA
+## 2    0.8816921 13861.46 5541.619          NA
+```
+
+```
+## Warning in predict.lm(mdl, newdata = OOB_df): prediction from a
+## rank-deficient fit may be misleading
+```
+
+```
 ## [1] 5478.107
 ## [1] 0.8767664
 ## 
@@ -956,7 +1111,7 @@ if (glb_is_regression) {
 ##      Min       1Q   Median       3Q      Max 
 ## -13.7249  -2.7133   0.1251   2.8306  11.6811 
 ## 
-## Coefficients:
+## Coefficients: (1 not defined because of singularities)
 ##                 Estimate Std. Error t value Pr(>|t|)    
 ## (Intercept)    -7.317014  42.598625  -0.172  0.86366    
 ## Year           -0.002738   0.014372  -0.190  0.84896    
@@ -968,6 +1123,7 @@ if (glb_is_regression) {
 ## G               0.515575   0.192575   2.677  0.00756 ** 
 ## League.fctrNL   0.005510   0.275334   0.020  0.98404    
 ## Team.fctr.num  -0.012983   0.015284  -0.849  0.39584    
+## Runs.diff             NA         NA      NA       NA    
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
@@ -975,14 +1131,47 @@ if (glb_is_regression) {
 ## Multiple R-squared:  0.8824,	Adjusted R-squared:  0.8812 
 ## F-statistic: 743.8 on 9 and 892 DF,  p-value: < 2.2e-16
 ## 
-##                                                       feats n.fit
-## 3 Year, RS, RA, OBP, SLG, BA, G, League.fctr, Team.fctr.num   902
-## 2                            RA, RS, G, Team.fctr.num, Year   902
-## 1                                                        RA   902
-##    R.sq.fit  R.sq.OOB Adj.R.sq.fit  SSE.fit   SSE.OOB f.score.OOB
-## 3 0.8824146 0.8767664    0.8824146 13776.81  5478.107          NA
-## 2 0.8816921 0.8753377    0.8816921 13861.46  5541.619          NA
-## 1 0.2578322 0.3331774    0.2578322 86955.58 29642.290          NA
+##                                                                  feats
+## 3 Year, RS, RA, OBP, SLG, BA, G, League.fctr, Team.fctr.num, Runs.diff
+## 1                                                            Runs.diff
+## 2                            Runs.diff, RA, RS, G, Team.fctr.num, Year
+##   n.fit  R.sq.fit  R.sq.OOB Adj.R.sq.fit  SSE.fit  SSE.OOB f.score.OOB
+## 3   902 0.8824146 0.8767664    0.8824146 13776.81 5478.107          NA
+## 1   902 0.8808104 0.8758349    0.8808104 13964.77 5519.514          NA
+## 2   902 0.8816921 0.8753377    0.8816921 13861.46 5541.619          NA
+## [1] 5523.029
+## [1] 0.8757559
+## 
+## Call:
+## lm(formula = reformulate(indep_vars_vctr, response = glb_predct_var), 
+##     data = fit_df)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -14.2682  -2.6316   0.1189   2.9461  11.6768 
+## 
+## Coefficients:
+##              Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) 80.531366   1.181688   68.15   <2e-16 ***
+## RS           0.106016   0.001547   68.55   <2e-16 ***
+## RA          -0.105519   0.001539  -68.57   <2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 3.941 on 899 degrees of freedom
+## Multiple R-squared:  0.8808,	Adjusted R-squared:  0.8806 
+## F-statistic:  3322 on 2 and 899 DF,  p-value: < 2.2e-16
+## 
+##                                                                  feats
+## 3 Year, RS, RA, OBP, SLG, BA, G, League.fctr, Team.fctr.num, Runs.diff
+## 1                                                            Runs.diff
+## 4                                                               RS, RA
+## 2                            Runs.diff, RA, RS, G, Team.fctr.num, Year
+##   n.fit  R.sq.fit  R.sq.OOB Adj.R.sq.fit  SSE.fit  SSE.OOB f.score.OOB
+## 3   902 0.8824146 0.8767664    0.8824146 13776.81 5478.107          NA
+## 1   902 0.8808104 0.8758349    0.8808104 13964.77 5519.514          NA
+## 4   902 0.8808221 0.8757559    0.8808221 13963.39 5523.029          NA
+## 2   902 0.8816921 0.8753377    0.8816921 13861.46 5541.619          NA
 ```
 
 ```r
@@ -993,26 +1182,17 @@ if (glb_is_classification) {
     # Highest cor.y
     ret_lst <- myrun_mdl_glm(indep_vars_vctr=glb_feats_df$id[1],
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)        
-    print(summary(mdl <- ret_lst$model)); 
-    print(orderBy(~ -f.score.OOB, 
-                  glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
 
     # Uncorrelated X
     ret_lst <- myrun_mdl_glm(indep_vars_vctr=glb_feats_df$id,
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)        
-    print(summary(mdl <- ret_lst$model)); 
-    print(orderBy(~ -f.score.OOB, 
-                  glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
-    glb_sel_mdl <- mdl
+    glb_sel_mdl <- glb_mdl
     
     # All X that is not missing
     ret_lst <- myrun_mdl_glm(indep_vars_vctr=setdiff(setdiff(names(glb_entity_df),
                                                              glb_predct_var),
                                                      glb_exclude_vars_as_features),
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)        
-    print(summary(mdl <- ret_lst$model)); 
-    print(orderBy(~ -f.score.OOB, 
-                  glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
 }
 
 if (glb_is_regression)
@@ -1051,10 +1231,21 @@ print(script_df)
 ## Step `6`: fit training.all
 
 ```r
+print(mdl_feats_df <- myextract_mdl_feats())
+```
+
+```
+##            Estimate  Std. Error  t value Pr.z        id
+## Runs.diff 0.1057656 0.001296884 81.55362    0 Runs.diff
+```
+
+```r
 if (glb_is_regression) {
-    ret_lst <- myrun_mdl_lm(indep_vars_vctr=glb_feats_df$id, fit_df=glb_entity_df)
-    print(summary(mdl <- ret_lst$model)); print(glb_sel_mdl_df <- ret_lst$models_df)
-    glb_entity_df[, glb_predct_var_name] <- predict(mdl, newdata=glb_entity_df)
+    ret_lst <- myrun_mdl_lm(indep_vars_vctr=mdl_feats_df$id, fit_df=glb_entity_df)
+    glb_sel_mdl <- glb_mdl
+    glb_entity_df[, glb_predct_var_name] <- predict(glb_sel_mdl, newdata=glb_entity_df)
+    print(myplot_scatter(glb_entity_df, glb_predct_var, glb_predct_var_name, 
+                         smooth=TRUE))
 }    
 ```
 
@@ -1066,48 +1257,55 @@ if (glb_is_regression) {
 ## 
 ## Residuals:
 ##      Min       1Q   Median       3Q      Max 
-## -14.3272  -2.6507   0.1523   2.8854  11.6413 
+## -14.2662  -2.6509   0.1234   2.9364  11.6570 
 ## 
 ## Coefficients:
-##                Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)    2.739170  41.274781   0.066    0.947    
-## RA            -0.105331   0.001645 -64.043   <2e-16 ***
-## RS             0.105440   0.001669  63.176   <2e-16 ***
-## G              0.453494   0.187855   2.414    0.016 *  
-## Team.fctr.num -0.015413   0.015186  -1.015    0.310    
-## Year           0.002471   0.013880   0.178    0.859    
+##              Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) 80.881375   0.131157  616.67   <2e-16 ***
+## Runs.diff    0.105766   0.001297   81.55   <2e-16 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 3.933 on 896 degrees of freedom
-## Multiple R-squared:  0.8817,	Adjusted R-squared:  0.881 
-## F-statistic:  1335 on 5 and 896 DF,  p-value: < 2.2e-16
+## Residual standard error: 3.939 on 900 degrees of freedom
+## Multiple R-squared:  0.8808,	Adjusted R-squared:  0.8807 
+## F-statistic:  6651 on 1 and 900 DF,  p-value: < 2.2e-16
 ## 
-##                            feats n.fit  R.sq.fit R.sq.OOB Adj.R.sq.fit
-## 1 RA, RS, G, Team.fctr.num, Year   902 0.8816921       NA    0.8816921
-##    SSE.fit SSE.OOB f.score.OOB
-## 1 13861.46      NA          NA
+##                                                                  feats
+## 3 Year, RS, RA, OBP, SLG, BA, G, League.fctr, Team.fctr.num, Runs.diff
+## 1                                                            Runs.diff
+## 4                                                               RS, RA
+## 2                            Runs.diff, RA, RS, G, Team.fctr.num, Year
+## 5                                                            Runs.diff
+##   n.fit  R.sq.fit  R.sq.OOB Adj.R.sq.fit  SSE.fit  SSE.OOB f.score.OOB
+## 3   902 0.8824146 0.8767664    0.8824146 13776.81 5478.107          NA
+## 1   902 0.8808104 0.8758349    0.8808104 13964.77 5519.514          NA
+## 4   902 0.8808221 0.8757559    0.8808221 13963.39 5523.029          NA
+## 2   902 0.8816921 0.8753377    0.8816921 13861.46 5541.619          NA
+## 5   902 0.8808104        NA    0.8808104 13964.77       NA          NA
 ```
+
+```
+## geom_smooth: method="auto" and size of largest group is <1000, so using loess. Use 'method = x' to change the smoothing method.
+```
+
+![](MoneyBall_Wins_files/figure-html/fit_training.all-1.png) 
 
 ```r
 if (glb_is_classification) {
-    ret_lst <- myrun_mdl_glm(indep_vars_vctr=glb_feats_df$id, fit_df=glb_entity_df)
-    print(summary(mdl <- ret_lst$model)); print(glb_sel_mdl_df <- ret_lst$models_df)
-    glb_entity_df[, glb_predct_var_name] <- (predict(mdl, 
+    ret_lst <- myrun_mdl_glm(indep_vars_vctr=mdl_feats_df$id, fit_df=glb_entity_df)
+    glb_sel_mdl <- glb_mdl    
+    glb_entity_df[, glb_predct_var_name] <- (predict(glb_sel_mdl, 
                         newdata=glb_entity_df, type="response") >= 0.5) * 1.0
+    print(xtabs(reformulate(paste(glb_predct_var, glb_predct_var_name, sep=" + ")),
+                glb_entity_df))
 }    
 
-glb_sel_mdl <- mdl
 print(glb_feats_df <- mymerge_feats_Pr.z())
 ```
 
 ```
-##              id        cor.y   cor.y.abs       Pr.z
-## 2            RA -0.507771762 0.507771762 0.00000000
-## 3            RS  0.507382436 0.507382436 0.00000000
-## 1             G  0.108128075 0.108128075 0.01597516
-## 4 Team.fctr.num -0.087036398 0.087036398 0.31041131
-## 5          Year  0.002755645 0.002755645 0.85871756
+##          id    cor.y cor.y.abs Pr.z
+## 1 Runs.diff 0.938515  0.938515    0
 ```
 
 ```r
@@ -1118,13 +1316,14 @@ for (var in subset(glb_feats_df, Pr.z < 0.1)$id) {
 }
 ```
 
-![](MoneyBall_Wins_files/figure-html/fit_training.all-1.png) ![](MoneyBall_Wins_files/figure-html/fit_training.all-2.png) ![](MoneyBall_Wins_files/figure-html/fit_training.all-3.png) 
+![](MoneyBall_Wins_files/figure-html/fit_training.all-2.png) 
 
 ```r
 if (glb_is_regression) {
     plot_vars_df <- subset(glb_feats_df, Pr.z < 0.1)
-    print(myplot_prediction_regression(glb_entity_df, plot_vars_df$id[1],
-                                           plot_vars_df$id[2]) + 
+    print(myplot_prediction_regression(glb_entity_df, 
+                ifelse(nrow(plot_vars_df) > 1, plot_vars_df$id[2], ".rownames"), 
+                                       plot_vars_df$id[1]) + 
               geom_point(aes_string(color="League.fctr"))
               )
 }    
@@ -1143,15 +1342,15 @@ if (glb_is_regression) {
 ## 958            NA 162   NA   NA       HOU          NL            13
 ## 758            NA 162   NA   NA       NYM          NL            19
 ## 1114           NA 161   NA   NA       BAL          AL             4
-##      W.predict W.predict.err   .label
-## 524   73.32721      14.32721 NYM:1993
-## 710   76.93387      12.93387 PIT:1986
-## 958   76.00761      12.00761 HOU:1975
-## 758   78.35868      11.64132 NYM:1984
-## 1114  87.15305      11.15305 BAL:1967
+##      Runs.diff W.predict W.predict.err   .label
+## 524        -72  73.26625      14.26625 NYM:1993
+## 710        -37  76.96805      12.96805 PIT:1986
+## 958        -47  75.91039      11.91039 HOU:1975
+## 758        -24  78.34300      11.65700 NYM:1984
+## 1114        62  87.43884      11.43884 BAL:1967
 ```
 
-![](MoneyBall_Wins_files/figure-html/fit_training.all-4.png) 
+![](MoneyBall_Wins_files/figure-html/fit_training.all-3.png) 
 
 ```r
 if (glb_is_classification) {
@@ -1185,7 +1384,7 @@ print(script_df)
 ## Step `7`: predict newdata
 
 ```r
-if (glb_is_regression)
+if (glb_is_regression) 
     glb_predct_df[, glb_predct_var_name] <- predict(glb_sel_mdl, 
                                         newdata=glb_predct_df, type="response")
 
@@ -1198,32 +1397,40 @@ myprint_df(glb_predct_df[, c(glb_id_vars, glb_predct_var, glb_predct_var_name)])
 
 ```
 ##   Team Year  W W.predict
-## 1  ARI 2012 81  86.07199
-## 2  ATL 2012 94  91.74075
-## 3  BAL 2012 93  81.93086
-## 4  BOS 2012 69  73.59669
-## 5  CHC 2012 61  65.77362
-## 6  CHW 2012 85  88.73505
+## 1  ARI 2012 81  85.74659
+## 2  ATL 2012 94  91.45794
+## 3  BAL 2012 93  81.62173
+## 4  BOS 2012 69  73.26625
+## 5  CHC 2012 61  65.43959
+## 6  CHW 2012 85  88.49650
 ##     Team Year  W W.predict
-## 60   WSN 2011 80  78.18727
-## 107  MIN 2009 87  86.92789
-## 149  TOR 2008 86  91.73757
-## 230  OAK 2005 88  92.92849
-## 314  KCR 2002 62  64.79645
-## 315  LAD 2002 92  88.37257
+## 60   WSN 2011 80  78.87183
+## 107  MIN 2009 87  86.38119
+## 149  TOR 2008 86  91.88100
+## 230  OAK 2005 88  92.93866
+## 314  KCR 2002 62  64.59347
+## 315  LAD 2002 92  88.28497
 ##     Team Year  W W.predict
-## 325  SEA 2002 93  92.96932
-## 326  SFG 2002 95  98.42775
-## 327  STL 2002 97  95.46350
-## 328  TBD 2002 55  54.53509
-## 329  TEX 2002 72  76.68985
-## 330  TOR 2002 78  79.19912
+## 325  SEA 2002 93  93.04442
+## 326  SFG 2002 95  98.54423
+## 327  STL 2002 97  95.58280
+## 328  TBD 2002 55  54.96880
+## 329  TEX 2002 72  76.75652
+## 330  TOR 2002 78  79.29489
 ```
 
 ```r
-if (glb_is_regression)
+if (glb_is_regression) {
+    print(sprintf("Total SSE: %0.4f", 
+                  sum((glb_predct_df[, glb_predct_var_name] - 
+                        glb_predct_df[, glb_predct_var]) ^ 2)))
     print(myplot_scatter(glb_predct_df, glb_predct_var, glb_predct_var_name, 
                          smooth=TRUE))
+}    
+```
+
+```
+## [1] "Total SSE: 5519.5140"
 ```
 
 ```
@@ -1244,14 +1451,15 @@ for (var in subset(glb_feats_df, Pr.z < 0.1)$id) {
 }
 ```
 
-![](MoneyBall_Wins_files/figure-html/predict_newdata-2.png) ![](MoneyBall_Wins_files/figure-html/predict_newdata-3.png) ![](MoneyBall_Wins_files/figure-html/predict_newdata-4.png) 
+![](MoneyBall_Wins_files/figure-html/predict_newdata-2.png) 
 
 ```r
 # Add choose(, 2) functionality to select feature pairs to plot 
 if (glb_is_regression) {
     plot_vars_df <- subset(glb_feats_df, Pr.z < 0.1)
-    print(myplot_prediction_regression(df=glb_predct_df, feat_x=plot_vars_df$id[1],
-                                           feat_y=plot_vars_df$id[2]) + 
+    print(myplot_prediction_regression(glb_predct_df, 
+                ifelse(nrow(plot_vars_df) > 1, plot_vars_df$id[2], ".rownames"),
+                                        plot_vars_df$id[1]) + 
               geom_point(aes_string(color="League.fctr"))
               )
 }    
@@ -1270,15 +1478,15 @@ if (glb_is_regression) {
 ## 134            4 162 0.323 0.406       LAA          AL            36
 ## 248           NA 162 0.348 0.481       CIN          NL             8
 ## 3              4 162 0.315 0.403       BAL          AL             4
-##     W.predict W.predict.err   .label
-## 211  64.35237      12.64763 ARI:2005
-## 188  90.38797      12.38797 CLE:2006
-## 134  87.85872      12.14128 LAA:2008
-## 248  64.57929      11.42071 CIN:2004
-## 3    81.93086      11.06914 BAL:2012
+##     Runs.diff W.predict W.predict.err   .label
+## 211      -160  63.95888      13.04112 ARI:2005
+## 188        88  90.18875      12.18875 CLE:2006
+## 134        68  88.07344      11.92656 LAA:2008
+## 248      -157  64.27617      11.72383 CIN:2004
+## 3           7  81.62173      11.37827 BAL:2012
 ```
 
-![](MoneyBall_Wins_files/figure-html/predict_newdata-5.png) 
+![](MoneyBall_Wins_files/figure-html/predict_newdata-3.png) 
 
 ```r
 if (glb_is_classification) {

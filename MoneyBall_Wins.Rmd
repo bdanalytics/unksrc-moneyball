@@ -76,6 +76,9 @@ glb_exclude_vars_as_features <- union(glb_exclude_vars_as_features,
 
 glb_is_regression <- TRUE; glb_is_classification <- !glb_is_regression
 
+glb_mdl <- glb_sel_mdl <- NULL
+glb_models_df <- data.frame()
+
 script_df <- data.frame(chunk_label="import_data", chunk_step_major=1, chunk_step_minor=0)
 print(script_df)
 ```
@@ -120,7 +123,14 @@ print(script_df)
 #View(glb_entity_df)
 
 # List info gathered for various columns
-# <col_name>:   <description>; <notes>
+#   Playoffs:       1 if the team made it in that year / 0 if not
+#   Wins:           # of total wins
+#   RS:             Runs scored
+#   RA:             Runs allowed
+#   <Runs.diff>:    RS - RA
+#   OBP:            on-base % (incl. walks)
+#   SLG:            slugging %
+#   BA:             batting average (excl. walks)
 
 # Create new features that help diagnostics
 #   Convert factors to dummy variables
@@ -247,6 +257,17 @@ print(script_df)
 
 ## Step ``r script_df[nrow(script_df), "chunk_step_major"]``: extract features
 ```{r extract_features, cache=FALSE}
+# Create new features that help prediction
+glb_entity_df <- mutate(glb_entity_df,
+    Runs.diff=RS - RA
+                    )
+
+glb_predct_df <- mutate(glb_predct_df,
+    Runs.diff=RS - RA
+                    )
+
+print(summary(glb_entity_df))
+print(summary(glb_predct_df))
 
 script_df <- rbind(script_df, 
                    data.frame(chunk_label="select_features", 
@@ -279,7 +300,6 @@ print(script_df)
 
 ## Step ``r script_df[nrow(script_df), "chunk_step_major"]``: run models
 ```{r run_models, cache=FALSE}
-glb_models_df <- data.frame()
 
 #   Regression:
 if (glb_is_regression) {
@@ -288,26 +308,21 @@ if (glb_is_regression) {
     # Highest cor.y
     ret_lst <- myrun_mdl_lm(indep_vars_vctr=glb_feats_df$id[1],
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)
-    print(summary(mdl <- ret_lst$model)); 
-    print(orderBy(~ -R.sq.OOB -Adj.R.sq.fit, 
-              glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
-
+    glb_sel_mdl <- glb_mdl
+    
     # Uncorrelated X
     ret_lst <- myrun_mdl_lm(indep_vars_vctr=glb_feats_df$id,
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)
-    print(summary(mdl <- ret_lst$model)); 
-    print(orderBy(~ -R.sq.OOB -Adj.R.sq.fit, 
-              glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
-    glb_sel_mdl <- mdl
     
     # All X that is not missing
     ret_lst <- myrun_mdl_lm(indep_vars_vctr=setdiff(setdiff(names(glb_entity_df),
                                                              glb_predct_var),
                                                      glb_exclude_vars_as_features),
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)
-    print(summary(mdl <- ret_lst$model)); 
-    print(orderBy(~ -R.sq.OOB -Adj.R.sq.fit, 
-              glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))    
+    
+    # RS, RA
+    ret_lst <- myrun_mdl_lm(indep_vars_vctr=c("RS", "RA"),
+                            fit_df=glb_entity_df, OOB_df=glb_predct_df)
 }    
 
 #   Classification:
@@ -317,26 +332,17 @@ if (glb_is_classification) {
     # Highest cor.y
     ret_lst <- myrun_mdl_glm(indep_vars_vctr=glb_feats_df$id[1],
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)        
-    print(summary(mdl <- ret_lst$model)); 
-    print(orderBy(~ -f.score.OOB, 
-                  glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
 
     # Uncorrelated X
     ret_lst <- myrun_mdl_glm(indep_vars_vctr=glb_feats_df$id,
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)        
-    print(summary(mdl <- ret_lst$model)); 
-    print(orderBy(~ -f.score.OOB, 
-                  glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
-    glb_sel_mdl <- mdl
+    glb_sel_mdl <- glb_mdl
     
     # All X that is not missing
     ret_lst <- myrun_mdl_glm(indep_vars_vctr=setdiff(setdiff(names(glb_entity_df),
                                                              glb_predct_var),
                                                      glb_exclude_vars_as_features),
                             fit_df=glb_entity_df, OOB_df=glb_predct_df)        
-    print(summary(mdl <- ret_lst$model)); 
-    print(orderBy(~ -f.score.OOB, 
-                  glb_models_df <- rbind(glb_models_df, ret_lst$models_df)))
 }
 
 if (glb_is_regression)
@@ -356,20 +362,25 @@ print(script_df)
 
 ## Step ``r script_df[nrow(script_df), "chunk_step_major"]``: fit training.all
 ```{r fit_training.all, cache=FALSE}
+print(mdl_feats_df <- myextract_mdl_feats())
+
 if (glb_is_regression) {
-    ret_lst <- myrun_mdl_lm(indep_vars_vctr=glb_feats_df$id, fit_df=glb_entity_df)
-    print(summary(mdl <- ret_lst$model)); print(glb_sel_mdl_df <- ret_lst$models_df)
-    glb_entity_df[, glb_predct_var_name] <- predict(mdl, newdata=glb_entity_df)
+    ret_lst <- myrun_mdl_lm(indep_vars_vctr=mdl_feats_df$id, fit_df=glb_entity_df)
+    glb_sel_mdl <- glb_mdl
+    glb_entity_df[, glb_predct_var_name] <- predict(glb_sel_mdl, newdata=glb_entity_df)
+    print(myplot_scatter(glb_entity_df, glb_predct_var, glb_predct_var_name, 
+                         smooth=TRUE))
 }    
 
 if (glb_is_classification) {
-    ret_lst <- myrun_mdl_glm(indep_vars_vctr=glb_feats_df$id, fit_df=glb_entity_df)
-    print(summary(mdl <- ret_lst$model)); print(glb_sel_mdl_df <- ret_lst$models_df)
-    glb_entity_df[, glb_predct_var_name] <- (predict(mdl, 
+    ret_lst <- myrun_mdl_glm(indep_vars_vctr=mdl_feats_df$id, fit_df=glb_entity_df)
+    glb_sel_mdl <- glb_mdl    
+    glb_entity_df[, glb_predct_var_name] <- (predict(glb_sel_mdl, 
                         newdata=glb_entity_df, type="response") >= 0.5) * 1.0
+    print(xtabs(reformulate(paste(glb_predct_var, glb_predct_var_name, sep=" + ")),
+                glb_entity_df))
 }    
 
-glb_sel_mdl <- mdl
 print(glb_feats_df <- mymerge_feats_Pr.z())
 
 for (var in subset(glb_feats_df, Pr.z < 0.1)$id) {
@@ -380,8 +391,9 @@ for (var in subset(glb_feats_df, Pr.z < 0.1)$id) {
 
 if (glb_is_regression) {
     plot_vars_df <- subset(glb_feats_df, Pr.z < 0.1)
-    print(myplot_prediction_regression(glb_entity_df, plot_vars_df$id[1],
-                                           plot_vars_df$id[2]) + 
+    print(myplot_prediction_regression(glb_entity_df, 
+                ifelse(nrow(plot_vars_df) > 1, plot_vars_df$id[2], ".rownames"), 
+                                       plot_vars_df$id[1]) + 
               geom_point(aes_string(color="League.fctr"))
               )
 }    
@@ -401,7 +413,7 @@ print(script_df)
 
 ## Step ``r script_df[nrow(script_df), "chunk_step_major"]``: predict newdata
 ```{r predict_newdata, cache=FALSE}
-if (glb_is_regression)
+if (glb_is_regression) 
     glb_predct_df[, glb_predct_var_name] <- predict(glb_sel_mdl, 
                                         newdata=glb_predct_df, type="response")
 
@@ -411,9 +423,13 @@ if (glb_is_classification)
     
 myprint_df(glb_predct_df[, c(glb_id_vars, glb_predct_var, glb_predct_var_name)])
 
-if (glb_is_regression)
+if (glb_is_regression) {
+    print(sprintf("Total SSE: %0.4f", 
+                  sum((glb_predct_df[, glb_predct_var_name] - 
+                        glb_predct_df[, glb_predct_var]) ^ 2)))
     print(myplot_scatter(glb_predct_df, glb_predct_var, glb_predct_var_name, 
                          smooth=TRUE))
+}    
 
 if (glb_is_classification)
     print(xtabs(reformulate(paste(glb_predct_var, glb_predct_var_name, sep=" + ")),
@@ -428,8 +444,9 @@ for (var in subset(glb_feats_df, Pr.z < 0.1)$id) {
 # Add choose(, 2) functionality to select feature pairs to plot 
 if (glb_is_regression) {
     plot_vars_df <- subset(glb_feats_df, Pr.z < 0.1)
-    print(myplot_prediction_regression(df=glb_predct_df, feat_x=plot_vars_df$id[1],
-                                           feat_y=plot_vars_df$id[2]) + 
+    print(myplot_prediction_regression(glb_predct_df, 
+                ifelse(nrow(plot_vars_df) > 1, plot_vars_df$id[2], ".rownames"),
+                                        plot_vars_df$id[1]) + 
               geom_point(aes_string(color="League.fctr"))
               )
 }    
