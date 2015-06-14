@@ -1,6 +1,6 @@
 ---
 # Get YAML keywords from myYAML_ref.Rmd
-title: "MoneyBall:Baseball-Reference.com: Playoffs classification:: Playoffs2"
+title: "MoneyBall:Baseball-Reference.com: W(ins) regression:: Wins2"
 author: "bdanalytics"
 
 # Choose one:
@@ -35,6 +35,9 @@ setwd("~/Documents/Work/Courses/MIT/Analytics_Edge_15_071x/Lectures/LCTR2_MoneyB
 ```
 
 # Synopsis:
+
+min.RMSE.new = 4.066459; All.X.lm;               Final.lm imp: RA 100.00; RS 28.07
+min.RMSE.new = 4.063103; Interact.High.cor.Y.lm; Final.lm imp: RD 100.00; RD:RS 24.04
 
 Based on analysis utilizing <> techniques, <conclusion heading>:  
 
@@ -118,44 +121,44 @@ registerDoMC(4) # max(length(glb_txt_vars), glb_n_cv_folds) + 1
 # Analysis control global variables
 glb_trnng_url <- "https://courses.edx.org/asset-v1:MITx+15.071x_2a+2T2015+type@asset+block/baseball.csv"
 glb_newdt_url <- "<newdt_url>"
-glb_out_pfx <- "Playoffs2_"
+glb_out_pfx <- "Wins2_"
 glb_save_envir <- FALSE # or TRUE
 
 glb_is_separate_newent_dataset <- FALSE    # or TRUE
 glb_split_entity_newent_datasets <- TRUE   # or FALSE
-glb_split_newdata_method <- "sample"          # "condition" or "sample" or "copy"
-glb_split_newdata_condition <- NULL # or "is.na(<var>)"; "<var> <condition_operator> <value>"
+glb_split_newdata_method <- "condition"          # "condition" or "sample" or "copy"
+glb_split_newdata_condition <- "Year >= 2002" # or "is.na(<var>)"; 
 glb_split_newdata_size_ratio <- 0.3               # > 0 & < 1
 glb_split_sample.seed <- 123               # or any integer
 glb_drop_vars <- c(NULL) # or c("<col_name>")
 
 glb_max_fitent_obs <- NULL # or any integer                         
-glb_is_regression <- FALSE; glb_is_classification <- !glb_is_regression; 
-glb_is_binomial <- TRUE # or TRUE or FALSE
+glb_is_regression <- TRUE; glb_is_classification <- !glb_is_regression; 
+glb_is_binomial <- NULL # or TRUE or FALSE
 
-glb_rsp_var_raw <- "Playoffs"
+glb_rsp_var_raw <- "W"
 
 # for classification, the response variable has to be a factor
-glb_rsp_var <- "Playoffs.fctr"
+glb_rsp_var <- glb_rsp_var_raw #"Playoffs.fctr"
 
 # if the response factor is based on numbers/logicals e.g (0/1 OR TRUE/FALSE vs. "A"/"B"), 
 #   or contains spaces (e.g. "Not in Labor Force")
 #   caret predict(..., type="prob") crashes
-glb_map_rsp_raw_to_var <- function(raw) {
-    relevel(factor(ifelse(raw == 1, "Y", "N")), as.factor(c("Y", "N")), ref="N")
-    #as.factor(paste0("B", raw))
-    #as.factor(gsub(" ", "\\.", raw))    
-}
-glb_map_rsp_raw_to_var(c(1, 1, 0, 0, 0))
+glb_map_rsp_raw_to_var <- NULL # function(raw) {
+#     relevel(factor(ifelse(raw == 1, "Y", "N")), as.factor(c("Y", "N")), ref="N")
+#     #as.factor(paste0("B", raw))
+#     #as.factor(gsub(" ", "\\.", raw))    
+# }
+# glb_map_rsp_raw_to_var(c(1, 1, 0, 0, 0))
 
-glb_map_rsp_var_to_raw <- function(var) {
-    as.numeric(var) - 1
-    #as.numeric(var)
-    #gsub("\\.", " ", levels(var)[as.numeric(var)])
-    #c(" <=50K", " >50K")[as.numeric(var)]
-    #c(FALSE, TRUE)[as.numeric(var)]
-}
-glb_map_rsp_var_to_raw(glb_map_rsp_raw_to_var(c(1, 1, 0, 0, 0)))
+glb_map_rsp_var_to_raw <- NULL # function(var) {
+#     as.numeric(var) - 1
+#     #as.numeric(var)
+#     #gsub("\\.", " ", levels(var)[as.numeric(var)])
+#     #c(" <=50K", " >50K")[as.numeric(var)]
+#     #c(FALSE, TRUE)[as.numeric(var)]
+# }
+# glb_map_rsp_var_to_raw(glb_map_rsp_raw_to_var(c(1, 1, 0, 0, 0)))
 
 if ((glb_rsp_var != glb_rsp_var_raw) & is.null(glb_map_rsp_raw_to_var))
     stop("glb_map_rsp_raw_to_var function expected")
@@ -225,10 +228,10 @@ glb_sprs_thresholds <- NULL # or c(0.988, 0.970, 0.970) # Generates 29, 22, 22 t
 names(glb_sprs_thresholds) <- glb_txt_vars
 
 # User-specified exclusions  
-glb_exclude_vars_as_features <- c("OOBP", "OSLG", 
+glb_exclude_vars_as_features <- c("OOBP", "OSLG", "Playoffs",
                                   "RankPlayoffs", "RankPlayoffs.my.fctr",
                                   "RankSeason", "RankSeason.my.fctr",
-                                  "Team.fctr", "Year") 
+                                  "Team.fctr") 
 if (glb_rsp_var_raw != glb_rsp_var)
     glb_exclude_vars_as_features <- union(glb_exclude_vars_as_features, 
                                             glb_rsp_var_raw)
@@ -734,6 +737,7 @@ add_new_diag_feats <- function(obs_df, ref_df=glb_allobs_df) {
 
 #         <col_name> = trunc(<col2_name> / 100),
 
+        RD = RS - RA,
         .rnorm = rnorm(n=nrow(obs_df))
                         )
 
@@ -828,7 +832,7 @@ dsp_numeric_feats_dstrb(feats_vctr=setdiff(names(glb_allobs_df),
 # print(myplot_scatter(glb_allobs_df, "<col1_name>", "<col2_name>", colorcol_name="<Pred.fctr>") + 
 #         geom_point(data=subset(glb_allobs_df, <condition>), 
 #                     mapping=aes(x=<x_var>, y=<y_var>), color="red", shape=4, size=5))
-print(myplot_scatter(glb_allobs_df, "W", "Team", colorcol_name="Playoffs.fctr") + 
+print(myplot_scatter(glb_allobs_df, "W", "Team", colorcol_name="Playoffs") + 
           geom_vline(xintercept=84) + 
           geom_vline(xintercept=95) + 
           geom_vline(xintercept=103))
@@ -2340,21 +2344,21 @@ for (method in glb_models_method_vctr) {
 # method <- ""                                
 
     # easier to include features
-#model_id <- "Rank9.2"; indep_vars_vctr <- c(NULL
-#    ,"<feat1>"
+model_id <- "CSM.RD"; indep_vars_vctr <- c(NULL
+   ,"RD"
 #    ,"<feat1>*<feat2>"
 #    ,"<feat1>:<feat2>"
-#                                            )
-# for (method in c("bayesglm")) {
-#     ret_lst <- myfit_mdl(model_id=model_id, model_method=method,
-#                                 indep_vars_vctr=indep_vars_vctr,
-#                                 model_type=glb_model_type,
-#                                 rsp_var=glb_rsp_var, rsp_var_out=glb_rsp_var_out,
-#                                 fit_df=glb_fitobs_df, OOB_df=glb_OOBobs_df,
-#                     n_cv_folds=glb_n_cv_folds, tune_models_df=glb_tune_models_df)
-# #     csm_mdl_id <- paste0(model_id, ".", method)
-# #     csm_featsimp_df <- myget_feats_importance(glb_models_lst[[paste0(model_id, ".", method)]]);         print(head(csm_featsimp_df))
-# }
+                                           )
+for (method in c("lm")) {
+    ret_lst <- myfit_mdl(model_id=model_id, model_method=method,
+                                indep_vars_vctr=indep_vars_vctr,
+                                model_type=glb_model_type,
+                                rsp_var=glb_rsp_var, rsp_var_out=glb_rsp_var_out,
+                                fit_df=glb_fitobs_df, OOB_df=glb_OOBobs_df,
+                    n_cv_folds=glb_n_cv_folds, tune_models_df=glb_tune_models_df)
+    csm_mdl_id <- paste0(model_id, ".", method)
+    csm_featsimp_df <- myget_feats_importance(glb_models_lst[[csm_mdl_id]]);         print(head(csm_featsimp_df))
+}
 #csm_featsimp_df[grepl("H.npnct19.log", row.names(csm_featsimp_df)), , FALSE]
 #csm_OOBobs_df <- glb_get_predictions(glb_OOBobs_df, mdl_id=csm_mdl_id, rsp_var_out=glb_rsp_var_out, prob_threshold_def=glb_models_df[glb_models_df$model_id == csm_mdl_id, "opt.prob.threshold.OOB"])
 #print(sprintf("%s OOB confusion matrix & accuracy: ", csm_mdl_id)); print(t(confusionMatrix(csm_OOBobs_df[, paste0(glb_rsp_var_out, csm_mdl_id)], csm_OOBobs_df[, glb_rsp_var])$table))
